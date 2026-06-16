@@ -1,0 +1,38 @@
+{
+  "name": "@workspace/desktop-app",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "node build.js",
+    "dist": "node build.js --portable"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.nsebse.tradingterminal",
+    "productName": "TradingTerminal",
+    "compression": "store",
+    "directories": {
+      "output": "../../dist-portable"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "app-dist/**/*"
+    ],
+    "asar": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "dev:desktop": "pnpm --filter @workspace/api-server build && pnpm --filter @workspace/market-dashboard build && pnpm --filter @workspace/desktop-app start",
+    "build:desktop": "pnpm --filter @workspace/api-server build && pnpm --filter @workspace/market-dashboard build && pnpm --filter @workspace/desktop-app build",
+    "dist:desktop": "pnpm --filter @workspace/api-server build && pnpm --filter @workspace/market-dashboard build && pnpm --filter @workspace/desktop-app build -- --portable"
+  },
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "prettier": "^3.8.1",
+    "tsx": "catalog:",
+    "typescript": "~5.9.2"
+  }
+}
