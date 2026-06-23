@@ -13,6 +13,8 @@ const STYLE_PROMPT: Record<string, string> = {
     "Balance risk and reward. Include signals that have moderate confirmation. Standard stop-loss and target levels. Include signals with confidence above 50%.",
   aggressive:
     "Include all noteworthy signals even if early or less confirmed. Wider targets, higher risk tolerance. Active traders want more signals. Include signals with confidence above 35%.",
+  committee:
+    "Act as the Chief Synthesizer of a Trading Committee. Weigh inputs from technical, fundamental, and risk perspectives to output a highly refined, consensus-driven signal.",
 };
 
 router.post("/openai/agent/analyze", async (req, res) => {
@@ -51,7 +53,7 @@ router.post("/openai/agent/analyze", async (req, res) => {
     const clampedNumSignals = Math.min(5, Math.max(1, Number(numSignals) || 2));
     const clampedTokens = Math.min(4096, Math.max(512, Number(maxTokens) || 2048));
     const clampedThreshold = Math.min(90, Math.max(0, Number(confidenceThreshold) || 0));
-    const styleKey = ["conservative", "moderate", "aggressive"].includes(style) ? style : "moderate";
+    const styleKey = ["conservative", "moderate", "aggressive", "committee"].includes(style) ? style : "moderate";
 
     let techData: any = null;
     try {
@@ -119,17 +121,51 @@ If ${instrumentType} is OPTIONS, suggest specific strike prices and expiries. On
     let usedProvider = "local-rule-engine";
 
     try {
-      const completion = await callWithFallback(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        { maxTokens: clampedTokens, preferredProvider: provider }
-      );
-      const content = completion.content;
-      usedProvider = completion.provider;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      analysisResult = JSON.parse(jsonMatch?.[0] ?? content);
+      if (styleKey === "committee") {
+        const [techRes, riskRes] = await Promise.all([
+          callWithFallback([
+            { role: "system", content: "You are a Technical Analyst. Analyze the indicators and suggest a trade direction." },
+            { role: "user", content: `Technical data for ${symbol}:\n${techContext}` }
+          ], { maxTokens: 500, preferredProvider: provider }),
+          callWithFallback([
+            { role: "system", content: "You are a Risk Manager. Focus on stop-losses, risk/reward ratios, and market volatility." },
+            { role: "user", content: `Risk analysis for ${symbol} given technicals:\n${techContext}` }
+          ], { maxTokens: 500, preferredProvider: provider })
+        ]);
+
+        const synthPrompt = `You are the Synthesizer for the Trading Committee. 
+Here is the Technical Analyst's view:
+${techRes.content}
+
+Here is the Risk Manager's view:
+${riskRes.content}
+
+${userPrompt}`;
+
+        const completion = await callWithFallback(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: synthPrompt },
+          ],
+          { maxTokens: clampedTokens, preferredProvider: provider }
+        );
+        const content = completion.content;
+        usedProvider = completion.provider;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        analysisResult = JSON.parse(jsonMatch?.[0] ?? content);
+      } else {
+        const completion = await callWithFallback(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          { maxTokens: clampedTokens, preferredProvider: provider }
+        );
+        const content = completion.content;
+        usedProvider = completion.provider;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        analysisResult = JSON.parse(jsonMatch?.[0] ?? content);
+      }
     } catch (err) {
       req.log.warn({ err }, "All AI providers failed. Falling back to Local Rule Engine.");
       

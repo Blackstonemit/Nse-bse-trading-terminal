@@ -4,7 +4,7 @@ import { db, providerSettings } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "./logger";
 
-export type AIProvider = "nvidia" | "openai" | "gemini" | "claude" | "ollama" | "deepseek" | "gemma";
+export type AIProvider = "inference" | "nvidia" | "openai" | "gemini" | "claude" | "ollama" | "deepseek" | "gemma" | "groq";
 
 export type AIMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -16,14 +16,17 @@ export type AICompletionResult = {
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 const PROVIDER_MODELS: Record<Exclude<AIProvider, "ollama">, string> = {
+  inference: "openrouter/claude-3-5-sonnet",
   nvidia: process.env["NVIDIA_MODEL"] ?? "qwen/qwen3.5-122b-a10b",
   openai: "gpt-4o-mini",
   gemini: "gemini-1.5-flash",
   claude: "claude-3-5-haiku-20241022",
   deepseek: "deepseek-chat", // Resolves to V3 or R1 via endpoint
   gemma: "gemma-4-31b-it",
+  groq: "llama-3.1-8b-instant",
 };
 
 function makeOpenAIClient(provider: Exclude<AIProvider, "claude" | "ollama">, apiKey: string): OpenAI {
@@ -35,6 +38,9 @@ function makeOpenAIClient(provider: Exclude<AIProvider, "claude" | "ollama">, ap
   }
   if (provider === "deepseek") {
     return new OpenAI({ apiKey, baseURL: DEEPSEEK_BASE_URL });
+  }
+  if (provider === "groq") {
+    return new OpenAI({ apiKey, baseURL: GROQ_BASE_URL });
   }
   return new OpenAI({ apiKey });
 }
@@ -142,11 +148,29 @@ async function callOllama(
   return content;
 }
 
+import { exec } from "child_process";
+import { promisify } from "util";
+const execAsync = promisify(exec);
+
+async function callInferenceSh(model: string, messages: AIMessage[]): Promise<string> {
+  const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
+  const inputStr = JSON.stringify({ prompt });
+  // Escape single quotes for bash string
+  const bashSafeInput = inputStr.replace(/'/g, "'\\''");
+  
+  try {
+    const { stdout } = await execAsync(`belt app run ${model} --input '${bashSafeInput}' --raw`);
+    return stdout.trim();
+  } catch (error) {
+    throw new Error(`inference.sh failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export async function callWithFallback(
   messages: AIMessage[],
   options: { maxTokens?: number; preferredProvider?: string; userId?: string } = {}
 ): Promise<AICompletionResult> {
-  const defaultOrder: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "ollama"];
+  const defaultOrder: AIProvider[] = ["inference", "nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "ollama"];
   let order = [...defaultOrder];
 
   if (options.preferredProvider && options.preferredProvider !== "fallback") {
@@ -170,6 +194,8 @@ export async function callWithFallback(
         content = await callClaude(apiKey, messages, maxTokens);
       } else if (provider === "ollama") {
         content = await callOllama(apiKey, messages, maxTokens);
+      } else if (provider === "inference") {
+        content = await callInferenceSh(PROVIDER_MODELS[provider], messages);
       } else {
         const client = makeOpenAIClient(provider, apiKey);
         const model = PROVIDER_MODELS[provider];
@@ -205,7 +231,7 @@ export async function getProvidersStatus(userId: string): Promise<
   const nvidiaKey = process.env["NVIDIA_API_KEY"];
   const geminiKey = process.env["GEMINI_API_KEY"];
   const gemmaKey = process.env["GEMMA_API_KEY"] ?? process.env["GEMINI_API_KEY"];
-  const providers: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "ollama"];
+  const providers: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "ollama"];
 
   return providers.map((p, idx) => {
     const row = dbMap.get(p);

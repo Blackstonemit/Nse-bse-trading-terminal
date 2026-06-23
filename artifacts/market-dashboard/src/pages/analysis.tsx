@@ -38,6 +38,12 @@ type AgentResult = {
   generatedAt: string;
 };
 
+const styleColors: Record<string, string> = {
+  conservative: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+  moderate: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",
+  aggressive: "text-red-400 border-red-500/30 bg-red-500/10",
+};
+
 export default function AnalysisBoard() {
   const { settings: agentSettings } = useSettings();
   const queryClient = useQueryClient();
@@ -118,12 +124,6 @@ export default function AnalysisBoard() {
   const confidenceThreshold = agentSettings.agentConfidenceThreshold;
   const filteredSignals = agentResult?.signals.filter((s) => s.confidence >= confidenceThreshold) ?? [];
 
-  const styleColors: Record<string, string> = {
-    conservative: "text-blue-400 border-blue-500/30 bg-blue-500/10",
-    moderate: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",
-    aggressive: "text-red-400 border-red-500/30 bg-red-500/10",
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -185,6 +185,8 @@ export default function AnalysisBoard() {
               <SelectItem value="gemini">Gemini</SelectItem>
               <SelectItem value="gemma">Gemma</SelectItem>
               <SelectItem value="ollama">Ollama Local</SelectItem>
+              <SelectItem value="deepseek">DeepSeek AI</SelectItem>
+              <SelectItem value="groq">Groq Fast</SelectItem>
             </SelectContent>
           </Select>
 

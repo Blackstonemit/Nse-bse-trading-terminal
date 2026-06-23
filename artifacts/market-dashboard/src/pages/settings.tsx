@@ -11,7 +11,7 @@ import { Settings2, RefreshCw, BarChart2, Eye, Save, RotateCcw, BrainCircuit, Sl
 import { cn } from "@/lib/utils";
 
 type ProviderStatus = {
-  provider: "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma";
+  provider: "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "groq";
   configured: boolean;
   enabled: boolean;
   isDefault: boolean;
@@ -60,6 +60,20 @@ const PROVIDER_META: Record<string, { label: string; color: string; keyUrl: stri
     keyUrl: "https://ollama.com",
     keyHint: "Local host & model config",
     model: "Local Models",
+  },
+  deepseek: {
+    label: "DeepSeek AI",
+    color: "text-blue-500",
+    keyUrl: "https://platform.deepseek.com",
+    keyHint: "sk-...",
+    model: "DeepSeek-V3",
+  },
+  groq: {
+    label: "Groq Fast Inference",
+    color: "text-red-500",
+    keyUrl: "https://console.groq.com/keys",
+    keyHint: "gsk_...",
+    model: "Llama 3.1 8B",
   },
 };
 
@@ -345,6 +359,7 @@ function StyleBadge({ style }: { style: string }) {
     conservative: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     moderate: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
     aggressive: "bg-red-500/20 text-red-300 border-red-500/30",
+    committee: "bg-purple-500/20 text-purple-300 border-purple-500/30",
   };
   return (
     <span className={cn("text-[10px] px-1.5 py-0.5 border rounded-full font-mono font-bold uppercase tracking-wider", colors[style] ?? "bg-muted/20 text-muted-foreground")}>
@@ -364,6 +379,7 @@ const STYLE_DESC: Record<string, string> = {
   conservative: "Fewer, high-confidence signals. Tighter SL/target ratios. Prefer confirmation.",
   moderate: "Balanced signals. Standard risk/reward. Default for most traders.",
   aggressive: "More signals, wider targets, higher risk tolerance. Suitable for active traders.",
+  committee: "Multi-Agent debate. Synthesizes inputs from Technical, Fundamental, and Risk agents.",
 };
 
 export default function SettingsDashboard() {
@@ -575,6 +591,8 @@ export default function SettingsDashboard() {
                     <SelectItem value="gemini">Google Gemini</SelectItem>
                     <SelectItem value="gemma">Google Gemma</SelectItem>
                     <SelectItem value="ollama">Ollama Local AI</SelectItem>
+                    <SelectItem value="deepseek">DeepSeek AI</SelectItem>
+                    <SelectItem value="groq">Groq Fast Inference</SelectItem>
                   </SelectContent>
                 </Select>
               </Row>
@@ -587,8 +605,8 @@ export default function SettingsDashboard() {
               <Sliders className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-mono font-bold tracking-wider text-muted-foreground">TRADING STYLE</span>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {(["conservative", "moderate", "aggressive"] as const).map((s) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(["conservative", "moderate", "aggressive", "committee"] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -598,6 +616,7 @@ export default function SettingsDashboard() {
                     local.agentStyle === s
                       ? s === "conservative" ? "border-blue-500/50 bg-blue-500/10"
                         : s === "moderate" ? "border-yellow-500/50 bg-yellow-500/10"
+                        : s === "committee" ? "border-purple-500/50 bg-purple-500/10"
                         : "border-red-500/50 bg-red-500/10"
                       : "border-muted bg-muted/5 hover:bg-muted/20"
                   )}

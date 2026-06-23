@@ -3,7 +3,7 @@ import { getProvidersStatus, saveProviderKey, toggleProvider } from "../lib/mult
 
 const router: IRouter = Router();
 
-const DB_PROVIDERS = ["openai", "claude", "gemini", "nvidia", "ollama", "gemma"] as const;
+const DB_PROVIDERS = ["openai", "claude", "gemini", "nvidia", "ollama", "gemma", "deepseek", "groq"] as const;
 type DbProvider = (typeof DB_PROVIDERS)[number];
 
 function isDbProvider(p: string): p is DbProvider {

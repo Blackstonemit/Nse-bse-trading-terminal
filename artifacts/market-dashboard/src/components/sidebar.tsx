@@ -17,7 +17,8 @@ import {
   LogOut,
   User as UserIcon,
   Workflow,
-  LayoutGrid
+  LayoutGrid,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/options-strategy", label: "Strategy Builder", icon: Workflow },
   { href: "/futures", label: "Futures", icon: BarChart2 },
   { href: "/analysis", label: "Technical Analysis", icon: TrendingUp },
+  { href: "/fundamentals", label: "Fundamentals", icon: BookOpen },
   { href: "/charts", label: "Charts", icon: CandlestickChart },
   { href: "/backtest", label: "Backtest", icon: FlaskConical },
   { href: "/bhavcopy", label: "Bhavcopy", icon: PackageOpen },
@@ -56,17 +58,25 @@ export function Sidebar() {
           {navItems.map((item) => {
             const isActive = location === item.href;
             return (
-              <Link key={item.href} href={item.href} className="block">
+              <Link key={item.href} href={item.href} className="block group">
                 <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-sm transition-colors",
+                    "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-sm transition-all duration-200",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  <item.icon className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    isActive ? "scale-110" : "group-hover:scale-110"
+                  )} />
+                  <span className={cn(
+                    "transition-transform duration-200",
+                    !isActive && "group-hover:translate-x-1"
+                  )}>
+                    {item.label}
+                  </span>
                 </div>
               </Link>
             );

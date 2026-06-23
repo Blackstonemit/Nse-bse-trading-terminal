@@ -15,7 +15,7 @@ export type Settings = {
   // ── AI Agent settings ───────────────────────────────────────────────────────
   agentInstrumentType: "STOCK" | "INDEX" | "OPTIONS" | "FUTURES";
   agentTimeframe: "INTRADAY" | "SWING" | "POSITIONAL";
-  agentStyle: "conservative" | "moderate" | "aggressive";
+  agentStyle: "conservative" | "moderate" | "aggressive" | "committee";
   agentNumSignals: number;
   agentConfidenceThreshold: number;
   agentAutoRun: boolean;
@@ -23,7 +23,7 @@ export type Settings = {
   agentSaveSignals: boolean;
   agentCustomContext: string;
   agentAutoGenerate: boolean;
-  agentProvider: "fallback" | "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma";
+  agentProvider: "fallback" | "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "groq";
 };
 
 const SETTINGS_KEY = "nse_terminal_settings";

@@ -12,6 +12,7 @@ import aiProvidersRouter from "./ai-providers";
 import paperTradingRouter from "./paper-trading";
 import copilotRouter from "./copilot";
 import bhavcopyRouter from "./bhavcopy";
+import fundamentalsRouter from "./fundamentals";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(aiProvidersRouter);
 router.use(paperTradingRouter);
 router.use(copilotRouter);
 router.use(bhavcopyRouter);
+router.use(fundamentalsRouter);
 
 export default router;
