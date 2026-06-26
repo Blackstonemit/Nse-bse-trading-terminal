@@ -16,6 +16,7 @@ import {
 } from "../lib/nse.js";
 import { callWithFallback } from "../lib/multi-ai.js";
 import { calculateGreeks } from "../lib/greeks.js";
+import { globalCache } from "../lib/cache.js";
 
 const router: IRouter = Router();
 
@@ -137,6 +138,13 @@ const DEFAULT_SYMBOLS = [
 router.get("/market/quotes", async (req, res) => {
   try {
     const query = GetMarketQuotesQueryParams.parse(req.query);
+    const cacheKey = `market_quotes_${query.symbols}_${query.exchange}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
     const symbols = query.symbols.split(",").map((s) => s.trim());
     
     const parsedSymbols = symbols.map((s) => {
@@ -181,7 +189,9 @@ router.get("/market/quotes", async (req, res) => {
       })
     );
 
-    res.json(quotes.filter(Boolean));
+    const result = quotes.filter(Boolean);
+    globalCache.set(cacheKey, result, 10000); // 10 seconds
+    res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch quotes");
     res.status(500).json({ error: "Failed to fetch market quotes" });
@@ -219,7 +229,126 @@ async function getGiftNiftyFromGroww(): Promise<{ value: number; change: number;
   }
 }
 
+// Global Markets Configuration
+const GLOBAL_INDICES = [
+  // Americas
+  { id: "sp500", symbol: "^GSPC", name: "S&P 500", region: "Americas", country: "USA", timezone: "America/New_York", openTime: "09:30", closeTime: "16:00" },
+  { id: "nasdaq", symbol: "^IXIC", name: "Nasdaq Composite", region: "Americas", country: "USA", timezone: "America/New_York", openTime: "09:30", closeTime: "16:00" },
+  { id: "dow", symbol: "^DJI", name: "Dow Jones", region: "Americas", country: "USA", timezone: "America/New_York", openTime: "09:30", closeTime: "16:00" },
+  { id: "tsx", symbol: "^GSPTSE", name: "S&P/TSX Composite", region: "Americas", country: "Canada", timezone: "America/Toronto", openTime: "09:30", closeTime: "16:00" },
+  { id: "bovespa", symbol: "^BVSP", name: "Bovespa", region: "Americas", country: "Brazil", timezone: "America/Sao_Paulo", openTime: "10:00", closeTime: "17:00" },
+  { id: "ipc", symbol: "^MXX", name: "IPC Mexico", region: "Americas", country: "Mexico", timezone: "America/Mexico_City", openTime: "08:30", closeTime: "15:00" },
+
+  // Europe & Africa
+  { id: "ftse", symbol: "^FTSE", name: "FTSE 100", region: "Europe & Africa", country: "UK", timezone: "Europe/London", openTime: "08:00", closeTime: "16:30" },
+  { id: "dax", symbol: "^GDAXI", name: "DAX Performance", region: "Europe & Africa", country: "Germany", timezone: "Europe/Berlin", openTime: "09:00", closeTime: "17:30" },
+  { id: "cac", symbol: "^FCHI", name: "CAC 40", region: "Europe & Africa", country: "France", timezone: "Europe/Paris", openTime: "09:00", closeTime: "17:30" },
+  { id: "stoxx50", symbol: "^STOXX50E", name: "Euro Stoxx 50", region: "Europe & Africa", country: "Eurozone", timezone: "Europe/Berlin", openTime: "09:00", closeTime: "17:30" },
+  { id: "smi", symbol: "^SSMI", name: "SMI", region: "Europe & Africa", country: "Switzerland", timezone: "Europe/Zurich", openTime: "09:00", closeTime: "17:30" },
+  { id: "j200", symbol: "^J200.JO", name: "JSE Top 40", region: "Europe & Africa", country: "South Africa", timezone: "Africa/Johannesburg", openTime: "09:00", closeTime: "17:00" },
+
+  // Asia Pacific
+  { id: "nikkei", symbol: "^N225", name: "Nikkei 225", region: "Asia Pacific", country: "Japan", timezone: "Asia/Tokyo", openTime: "09:00", closeTime: "15:00" },
+  { id: "hangseng", symbol: "^HSI", name: "Hang Seng", region: "Asia Pacific", country: "Hong Kong", timezone: "Asia/Hong_Kong", openTime: "09:30", closeTime: "16:00" },
+  { id: "shanghai", symbol: "000001.SS", name: "Shanghai Composite", region: "Asia Pacific", country: "China", timezone: "Asia/Shanghai", openTime: "09:30", closeTime: "15:00" },
+  { id: "asx", symbol: "^AXJO", name: "S&P/ASX 200", region: "Asia Pacific", country: "Australia", timezone: "Australia/Sydney", openTime: "10:00", closeTime: "16:00" },
+  { id: "kospi", symbol: "^KS11", name: "KOSPI", region: "Asia Pacific", country: "South Korea", timezone: "Asia/Seoul", openTime: "09:00", closeTime: "15:30" },
+  { id: "taiex", symbol: "^TWII", name: "TAIEX", region: "Asia Pacific", country: "Taiwan", timezone: "Asia/Taipei", openTime: "09:00", closeTime: "13:30" },
+  { id: "nifty", symbol: "^NSEI", name: "Nifty 50", region: "Asia Pacific", country: "India", timezone: "Asia/Kolkata", openTime: "09:15", closeTime: "15:30" },
+  { id: "sensex", symbol: "^BSESN", name: "BSE Sensex", region: "Asia Pacific", country: "India", timezone: "Asia/Kolkata", openTime: "09:15", closeTime: "15:30" },
+];
+
+function getMarketStatus(timezone: string, openTime: string, closeTime: string): "OPEN" | "CLOSED" | "PRE_MARKET" {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", minute: "numeric", hour12: false, weekday: "short" });
+    const parts = formatter.formatToParts(now);
+    
+    let hour = 0, minute = 0, weekday = "";
+    for (const part of parts) {
+      if (part.type === "hour") hour = parseInt(part.value, 10);
+      if (part.type === "minute") minute = parseInt(part.value, 10);
+      if (part.type === "weekday") weekday = part.value;
+    }
+
+    if (hour === 24) hour = 0;
+    const currentTime = hour * 60 + minute;
+
+    const [oh, om] = openTime.split(":").map(Number);
+    const openMins = oh * 60 + om;
+
+    const [ch, cm] = closeTime.split(":").map(Number);
+    const closeMins = ch * 60 + cm;
+
+    if (weekday === "Sat" || weekday === "Sun") return "CLOSED";
+
+    if (currentTime >= openMins - 120 && currentTime < openMins) {
+      return "PRE_MARKET";
+    }
+
+    if (currentTime >= openMins && currentTime <= closeMins) {
+      return "OPEN";
+    }
+
+    return "CLOSED";
+  } catch {
+    return "CLOSED";
+  }
+}
+
+router.get("/market/global", async (req, res) => {
+  try {
+    const cacheKey = "market_global_indices";
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    const quotes = await Promise.all(
+      GLOBAL_INDICES.map(async (idx) => {
+        try {
+          const q = await yahooFinance.quote(idx.symbol);
+          const price = q.regularMarketPrice ?? q.regularMarketPreviousClose ?? 0;
+          return {
+            ...idx,
+            price,
+            change: q.regularMarketChange ?? 0,
+            changePercent: q.regularMarketChangePercent ?? 0,
+            status: getMarketStatus(idx.timezone, idx.openTime, idx.closeTime),
+            timestamp: new Date().toISOString()
+          };
+        } catch {
+          // Return cached or fallback if possible
+          return {
+            ...idx,
+            price: 0,
+            change: 0,
+            changePercent: 0,
+            status: "CLOSED",
+            timestamp: new Date().toISOString()
+          };
+        }
+      })
+    );
+
+    // Filter out ones that completely failed to fetch price (0) if desired, but we want the UI to still show them
+    globalCache.set(cacheKey, quotes, 30000); // 30 second cache
+    res.json(quotes);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch global indices");
+    res.status(500).json({ error: "Failed to fetch global market data" });
+  }
+});
+
 router.get("/market/indices", async (req, res) => {
+  const cacheKey = "market_indices";
+  const cached = globalCache.get(cacheKey);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
   // Try NSE first, fall back to Yahoo Finance
   try {
     const nseData = await nseClient.get<NseAllIndicesResponse>("/allIndices");
@@ -325,6 +454,7 @@ router.get("/market/indices", async (req, res) => {
       };
     }));
 
+    globalCache.set(cacheKey, results, 10000); // 10 seconds
     res.json(results);
   } catch (nseErr) {
     req.log.warn({ err: nseErr }, "NSE indices failed, falling back to Yahoo");
@@ -366,6 +496,7 @@ router.get("/market/indices", async (req, res) => {
           }
         })
       );
+      globalCache.set(cacheKey, results, 10000); // 10 seconds
       res.json(results);
     } catch (err) {
       req.log.error({ err }, "Failed to fetch indices");
@@ -376,6 +507,13 @@ router.get("/market/indices", async (req, res) => {
 
 router.get("/market/options-chain", async (req, res) => {
   const query = GetOptionsChainQueryParams.parse(req.query);
+  const cacheKey = `options_chain_${query.symbol}_${query.expiry ?? "default"}`;
+  const cached = globalCache.get(cacheKey);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
   let symbol = query.symbol.toUpperCase();
   let bseWarning: string | null = null;
 
@@ -455,7 +593,7 @@ router.get("/market/options-chain", async (req, res) => {
       if (row?.PE) puts.push(mapNse(row.PE, "PE"));
     }
 
-    return res.json({
+    const resultData = {
       symbol,
       underlyingPrice,
       expiries,
@@ -465,7 +603,9 @@ router.get("/market/options-chain", async (req, res) => {
       calls,
       puts,
       bseWarning,
-    });
+    };
+    globalCache.set(cacheKey, resultData, 15000); // 15 seconds
+    return res.json(resultData);
   } catch (nseErr) {
     req.log.warn({ err: nseErr }, "NSE options chain failed, falling back to Yahoo Finance");
   }
@@ -517,14 +657,16 @@ router.get("/market/options-chain", async (req, res) => {
           ...greeks,
         };
       };
-      return res.json({
+      const resultData = {
         symbol, underlyingPrice, expiries, selectedExpiry,
         dataSource: "Yahoo",
         timestamp: new Date().toISOString(),
         calls: (chain.calls || []).map((c: any) => mapY(c, "CE")),
         puts:  (chain.puts  || []).map((p: any) => mapY(p, "PE")),
         bseWarning,
-      });
+      };
+      globalCache.set(cacheKey, resultData, 15000);
+      return res.json(resultData);
     }
 
     // ── 3. Synthetic last-resort fallback ──────────────────────────────────
@@ -561,14 +703,16 @@ router.get("/market/options-chain", async (req, res) => {
         };
       });
 
-    return res.json({
+    const resultData = {
       symbol, underlyingPrice, expiries, selectedExpiry,
       dataSource: "synthetic",
       timestamp: new Date().toISOString(),
       calls: makeSynthetic("CE"),
       puts:  makeSynthetic("PE"),
       bseWarning,
-    });
+    };
+    globalCache.set(cacheKey, resultData, 15000);
+    return res.json(resultData);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch options chain");
     return res.status(500).json({ error: "Failed to fetch options chain" });
@@ -578,6 +722,12 @@ router.get("/market/options-chain", async (req, res) => {
 router.get("/market/futures", async (req, res) => {
   try {
     const query = GetFuturesQueryParams.parse(req.query);
+    const cacheKey = `futures_${query.symbol ?? "all"}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
 
     const futuresSymbols = [
       { symbol: "NIFTY", yahooSym: "^NSEI", name: "NIFTY Futures" },
@@ -627,7 +777,9 @@ router.get("/market/futures", async (req, res) => {
       })
     );
 
-    res.json(results.filter(Boolean));
+    const result = results.filter(Boolean);
+    globalCache.set(cacheKey, result, 15000); // 15 seconds
+    res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch futures");
     res.status(500).json({ error: "Failed to fetch futures" });
@@ -637,6 +789,13 @@ router.get("/market/futures", async (req, res) => {
 router.get("/market/history", async (req, res) => {
   try {
     const query = GetMarketHistoryQueryParams.parse(req.query);
+    const cacheKey = `market_history_${query.symbol}_${query.interval}_${query.period}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
     const INDEX_MAP: Record<string, string> = {
       NIFTY:      "^NSEI",
       NIFTY50:    "^NSEI",
@@ -695,11 +854,13 @@ router.get("/market/history", async (req, res) => {
         volume: q.volume ?? 0,
       })) ?? [];
 
-    res.json({
+    const resultData = {
       symbol: query.symbol,
       interval: query.interval || "1d",
       candles,
-    });
+    };
+    globalCache.set(cacheKey, resultData, 60000); // 1 min
+    res.json(resultData);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch history");
     res.status(500).json({ error: "Failed to fetch market history" });
@@ -708,6 +869,13 @@ router.get("/market/history", async (req, res) => {
 
 router.get("/market/movers", async (req, res) => {
   try {
+    const cacheKey = `market_movers`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
     const quotes = await Promise.all(
       DEFAULT_SYMBOLS.map(async (sym) => {
         try {
@@ -738,13 +906,15 @@ router.get("/market/movers", async (req, res) => {
     const valid = quotes.filter(Boolean) as any[];
     const sorted = [...valid].sort((a, b) => b.changePercent - a.changePercent);
 
-    res.json({
+    const resultData = {
       gainers: sorted.slice(0, 5),
       losers: sorted.slice(-5).reverse(),
       mostActive: [...valid]
         .sort((a, b) => b.volume - a.volume)
         .slice(0, 5),
-    });
+    };
+    globalCache.set(cacheKey, resultData, 60000); // 1 minute
+    res.json(resultData);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch movers");
     res.status(500).json({ error: "Failed to fetch market movers" });
@@ -756,6 +926,12 @@ router.get("/market/search", async (req, res) => {
   try {
     const q = String(req.query.q ?? "").trim();
     if (!q) return res.json({ results: [] });
+
+    const cacheKey = `market_search_${q.toLowerCase()}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const raw = await yahooFinance.search(q, { newsCount: 0 }, { validateResult: false });
     const results = (raw.quotes ?? [])
@@ -788,7 +964,9 @@ router.get("/market/search", async (req, res) => {
         };
       });
 
-    return res.json({ results });
+    const resultData = { results };
+    globalCache.set(cacheKey, resultData, 300000); // 5 minutes
+    return res.json(resultData);
   } catch (err) {
     req.log.error({ err }, "Symbol search failed");
     return res.status(500).json({ error: "Search failed" });

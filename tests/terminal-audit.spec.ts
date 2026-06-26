@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 
 // Target directory for verification screenshots
-const screenshotDir = 'C:/Users/blackstone/.gemini/antigravity-ide/brain/5a19b85b-a438-4298-9334-0ee7484f7986';
+const screenshotDir = 'C:/Users/blackstone/.gemini/antigravity-ide/brain/d0ce3a43-327f-444e-9812-41f4b6ce6490';
 
 test.describe('NSE/BSE Trading Terminal E2E Audit', () => {
   let consoleErrors: string[] = [];

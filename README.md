@@ -20,12 +20,12 @@
 | **Backtest** | Options strategy backtester using Black‑Scholes + historical Yahoo Finance price data |
 | **Bhavcopy Analyzer** | Upload and analyse NSE daily Bhavcopy ZIP/CSV — gainers, losers, delivery % and bulk‑deal analysis |
 | **Watchlist** | Persist your own symbol watchlist with live price quotes |
-| **Settings** | Configure AI providers (NVIDIA, OpenAI, Anthropic, Gemini) and chart defaults |
+| **Settings** | Configure AI providers (NVIDIA, OpenAI, Anthropic, Gemini, Groq, DeepSeek, OpenModel) and chart defaults |
 
 ### AI Signal Generation
 
-- **Primary model:** NVIDIA Qwen 3.6 (via `NVIDIA_API_KEY`)
-- **Fallbacks (in order):** OpenAI → Anthropic Claude → Google Gemini
+- **Primary model:** Auto-Fallback Engine (or user-selected preference)
+- **Fallbacks (in order):** OpenRouter (inference.sh) → NVIDIA NIM (Qwen) → OpenAI ChatGPT → Anthropic Claude → Google Gemini → Google Gemma → DeepSeek → Groq → OpenModel → Ollama Local AI
 - **Scheduler:** Auto‑generates signals every 15 minutes during IST market hours (09:15–15:30, Mon–Fri)
 - **Expiry:** Stale signals auto‑expire every 5 minutes
 
@@ -178,12 +178,13 @@ http://localhost:5173
 
 ## 📊 Current Status
 
-- **Fully functional:** Live market data, AI signal generation, options chain, technical indicators, charts, backtesting, Bhavcopy upload.
+- **Fully functional:** Live market data, AI signal generation, options chain, technical indicators, charts, backtesting, Bhavcopy upload, and **Desktop App (`TradingTerminal.exe`)**.
+- **Data Modes:** The platform utilizes real-time API integrations where available, and automatically falls back to an internal **Synthetic Data Generator** for Order Flow and Depth of Market (DOM) to simulate live trading safely without broker API keys.
 - **Known limitations:**
   - Futures OI is simulated (no free real‑time source).
-  - AI signals rely on NVIDIA Qwen; fallback keys must be set in the Settings page.
+  - AI signals rely on local Ollama; fallback keys must be set in the Settings page.
   - Windows installation requires the manual fixes described above.
-- **Roadmap (next release):** Docker support, automated CI/CD, multi‑user authentication, additional AI providers.
+- **Roadmap (next release):** Docker support, automated CI/CD, multi‑user authentication, additional broker integrations (Zerodha/Upstox).
 
 ---
 
@@ -201,7 +202,7 @@ http://localhost:5173
 
 - Licensed under the **MIT License**.
 - Thanks to the open‑source community for libraries such as **Express**, **Drizzle ORM**, **Tailwind CSS**, **React**, and **lightweight‑charts**.
-- AI models powered by **NVIDIA**, **OpenAI**, **Anthropic**, and **Google Gemini**.
+- AI models powered by **Ollama**, **NVIDIA**, **Google Gemma**, **OpenAI**, **Anthropic**, **Google Gemini**, **DeepSeek**, **Groq**, and **OpenModel**.
 
 ---
 

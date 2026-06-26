@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   useGetMarketIndices, getGetMarketIndicesQueryKey,
   useGetMarketMovers,  getGetMarketMoversQueryKey,
@@ -16,8 +16,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowDownIcon, ArrowUpIcon, Activity, Plus, X, Search, Loader2 } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Activity, Plus, X, Search, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type GlobalIndex = {
+  id: string;
+  symbol: string;
+  name: string;
+  region: string;
+  country: string;
+  openTime: string;
+  closeTime: string;
+  timezone: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  status: "OPEN" | "CLOSED" | "PRE_MARKET";
+  timestamp: string;
+};
 
 
 // ── Quote type from /api/market/quotes ───────────────────────────────────────
@@ -38,7 +54,7 @@ type SearchResult = { symbol: string; yahooSymbol: string; name: string; exchang
 
 // ── Symbol search popover ─────────────────────────────────────────────────────
 
-function AddSymbolPopover({
+const AddSymbolPopover = React.memo(function AddSymbolPopover({
   pinned,
   onAdd,
   onClose,
@@ -151,11 +167,11 @@ function AddSymbolPopover({
       </div>
     </div>
   );
-}
+});
 
 // ── Pinned tile ───────────────────────────────────────────────────────────────
 
-function PinnedTile({ 
+const PinnedTile = React.memo(function PinnedTile({ 
   quote, 
   symbol, 
   onRemove, 
@@ -163,7 +179,7 @@ function PinnedTile({
 }: { 
   quote: LiveQuote | null; 
   symbol: string; 
-  onRemove: () => void; 
+  onRemove: (sym: string) => void; 
   onShowSentiment: (data: any) => void;
 }) {
   const up = (quote?.changePercent ?? 0) >= 0;
@@ -184,7 +200,7 @@ function PinnedTile({
   return (
     <Card className="rounded-sm border-border bg-card relative group">
       <button
-        onClick={onRemove}
+        onClick={() => onRemove(symbol)}
         className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive z-10"
         title="Remove"
       >
@@ -233,11 +249,11 @@ function PinnedTile({
       </CardContent>
     </Card>
   );
-}
+});
 
 // ── Sentiment Modal ────────────────────────────────────────────────────────────
 
-function SentimentModal({ data, onClose }: { data: any; onClose: () => void }) {
+const SentimentModal = React.memo(function SentimentModal({ data, onClose }: { data: any; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div 
@@ -332,7 +348,7 @@ function SentimentModal({ data, onClose }: { data: any; onClose: () => void }) {
       </div>
     </div>
   );
-}
+});
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -382,6 +398,17 @@ export default function Dashboard() {
   const { data: movers,  isLoading: loadingMovers  } = useGetMarketMovers();
   const { data: summary, isLoading: loadingSummary } = useGetAnalysisSummary();
   const { data: signals, isLoading: loadingSignals } = useGetSignals({ status: "ACTIVE" });
+
+  const { data: globalIndices, isLoading: loadingGlobal } = useQuery<GlobalIndex[]>({
+    queryKey: ["/api/market/global"],
+    queryFn: async () => {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/market/global`);
+      if (!res.ok) throw new Error("Failed to fetch global indices");
+      return res.json();
+    },
+    refetchInterval: 60000,
+  });
 
   // ── Pinned symbols state (Unified with Watchlist) ────────────────────────────
   const { data: watchlistData, isLoading: watchlistLoading } = useGetWatchlist();
@@ -435,7 +462,7 @@ export default function Dashboard() {
     );
   };
 
-  const removePin = (sym: string) => {
+  const removePin = useCallback((sym: string) => {
     const item = watchlistData?.find((w) => w.symbol.toUpperCase() === sym.toUpperCase());
     if (item) {
       removeWatchlistMutation.mutate(
@@ -448,7 +475,7 @@ export default function Dashboard() {
         }
       );
     }
-  };
+  }, [watchlistData, removeWatchlistMutation, queryClient, toast]);
 
   const { data: pinnedQuotesData, isLoading: quotesLoading } = useGetMarketQuotes(
     { symbols: pinsSymbols },
@@ -553,13 +580,13 @@ export default function Dashboard() {
               </button>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
-                {pins.map(sym => (
+                {Array.isArray(watchlistData) && watchlistData.map(item => (
                   <PinnedTile
-                    key={sym}
-                    symbol={sym}
-                    quote={pinnedQuotes[sym] ?? null}
-                    onRemove={() => removePin(sym)}
-                    onShowSentiment={(data) => setSelectedSentiment(data)}
+                    key={item.id}
+                    symbol={item.symbol}
+                    quote={pinnedQuotes[item.symbol] ?? null}
+                    onRemove={removePin}
+                    onShowSentiment={setSelectedSentiment}
                   />
                 ))}
                 {/* Add more button */}
@@ -575,6 +602,49 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Global Markets Horizontal Ticker */}
+      <Card className="rounded-sm border-muted bg-card">
+        <CardContent className="p-0">
+          {loadingGlobal ? (
+            <div className="flex px-4 py-3 items-center gap-4 animate-pulse">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <div className="h-4 w-24 bg-muted rounded"></div>
+              <div className="h-4 w-24 bg-muted rounded"></div>
+              <div className="h-4 w-24 bg-muted rounded"></div>
+            </div>
+          ) : globalIndices && globalIndices.length > 0 ? (
+            <div className="flex items-center overflow-x-auto whitespace-nowrap hide-scrollbar py-3 px-4 border-l-2 border-l-primary/50">
+              <div className="flex items-center gap-2 mr-6 text-xs font-bold font-mono text-muted-foreground shrink-0">
+                <Globe className="h-3.5 w-3.5" /> GLOBAL
+              </div>
+              <div className="flex items-center gap-6">
+                {globalIndices.map(idx => {
+                  const isUp = idx.change >= 0;
+                  return (
+                    <div key={idx.id} className="flex items-center gap-2 text-xs font-mono shrink-0">
+                      <span className="font-bold">{idx.name}</span>
+                      <span>{idx.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className={cn("flex items-center", isUp ? "text-green-500" : "text-red-500")}>
+                        {isUp ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
+                        {idx.changePercent.toFixed(2)}%
+                      </span>
+                      <Badge variant="outline" className={cn(
+                        "ml-1 text-[8px] h-4 px-1 rounded-sm border-0 font-bold",
+                        idx.status === "OPEN" ? "bg-green-500/20 text-green-400" :
+                        idx.status === "PRE_MARKET" ? "bg-yellow-500/20 text-yellow-500" :
+                        "bg-muted text-muted-foreground opacity-50"
+                      )}>
+                        {idx.status}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {/* Market Breadth + Top Movers */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

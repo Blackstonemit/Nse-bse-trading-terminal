@@ -13,6 +13,8 @@ import paperTradingRouter from "./paper-trading";
 import copilotRouter from "./copilot";
 import bhavcopyRouter from "./bhavcopy";
 import fundamentalsRouter from "./fundamentals";
+import newsRouter from "./news";
+import orderflowRouter from "./orderflow";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use(paperTradingRouter);
 router.use(copilotRouter);
 router.use(bhavcopyRouter);
 router.use(fundamentalsRouter);
+router.use("/news", newsRouter);
+router.use("/orderflow", orderflowRouter);
 
 export default router;

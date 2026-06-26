@@ -1,9 +1,10 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
+import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
@@ -23,7 +24,10 @@ const BhavcopyPage = lazy(() => import("@/pages/bhavcopy"));
 const ScalpingPage = lazy(() => import("@/pages/scalping"));
 const PaperTradingPage = lazy(() => import("@/pages/paper-trading"));
 const OptionsStrategy = lazy(() => import("@/pages/options-strategy"));
+const GlobalMarketsPage = lazy(() => import("@/pages/global-markets"));
 const Workspace = lazy(() => import("@/pages/workspace"));
+const NewsPage = lazy(() => import("@/pages/news"));
+const OrderFlowPage = lazy(() => import("@/pages/orderflow"));
 const LoginPage = lazy(() => import("@/pages/login"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -32,6 +36,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 60000, // 1 minute
     },
   },
 });
@@ -48,6 +53,17 @@ function Router() {
   const { user, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
+  const mustRedirectToLogin = !user && location !== "/login";
+  const mustRedirectToHome = !!user && location === "/login";
+
+  useEffect(() => {
+    if (mustRedirectToLogin) {
+      setLocation("/login");
+    } else if (mustRedirectToHome) {
+      setLocation("/");
+    }
+  }, [mustRedirectToLogin, mustRedirectToHome, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center font-mono text-xs text-muted-foreground">
@@ -57,13 +73,7 @@ function Router() {
     );
   }
 
-  if (!user && location !== "/login") {
-    setLocation("/login");
-    return null;
-  }
-
-  if (user && location === "/login") {
-    setLocation("/");
+  if (mustRedirectToLogin || mustRedirectToHome) {
     return null;
   }
 
@@ -93,7 +103,10 @@ function Router() {
           <Route path="/scalping" component={ScalpingPage} />
           <Route path="/paper-trading" component={PaperTradingPage} />
           <Route path="/options-strategy" component={OptionsStrategy} />
+          <Route path="/global-markets" component={GlobalMarketsPage} />
           <Route path="/workspace" component={Workspace} />
+          <Route path="/news" component={NewsPage} />
+          <Route path="/orderflow" component={OrderFlowPage} />
           <Route path="/settings" component={SettingsDashboard} />
           <Route component={NotFound} />
         </Switch>
@@ -107,10 +120,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
+          <ThemeProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </ThemeProvider>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

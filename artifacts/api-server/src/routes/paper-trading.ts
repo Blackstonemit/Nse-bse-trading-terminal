@@ -324,4 +324,15 @@ router.get("/paper/performance", async (req: any, res) => {
   }
 });
 
+router.delete("/paper/reset", async (req: any, res) => {
+  try {
+    const userId = req.user!.id;
+    await db.delete(trades).where(eq(trades.userId, userId));
+    res.json({ message: "Paper trading portfolio reset successfully" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to reset paper trading portfolio");
+    res.status(500).json({ error: "Failed to reset portfolio" });
+  }
+});
+
 export default router;

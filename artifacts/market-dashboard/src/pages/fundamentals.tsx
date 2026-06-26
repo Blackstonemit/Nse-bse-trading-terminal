@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Building2, 
@@ -13,7 +13,11 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  Activity
+  Activity,
+  Newspaper,
+  CalendarDays,
+  ExternalLink,
+  ChevronDown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +53,79 @@ function transformEarnings(earningsData: any) {
   }));
 }
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+function SymbolSearch({ onSelect }: { onSelect: (symbol: string) => void }) {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useState<HTMLDivElement | null>(null);
+
+  const { data: results, isLoading } = useQuery({
+    queryKey: ["symbol-search", debouncedQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/fundamentals/search?q=${encodeURIComponent(debouncedQuery)}`);
+      if (!res.ok) throw new Error("Search failed");
+      return res.json();
+    },
+    enabled: debouncedQuery.length > 1
+  });
+
+  return (
+    <div className="relative w-full md:w-80 font-mono">
+      <div className="relative flex items-center">
+        <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+        <Input 
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+          placeholder="Search company or symbol..."
+          className="w-full pl-9 pr-4 bg-sidebar border-sidebar-border/50 uppercase"
+        />
+      </div>
+      {isOpen && query.length > 1 && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-sidebar border border-sidebar-border/50 shadow-xl rounded-md max-h-64 overflow-y-auto">
+          {isLoading && <div className="p-3 text-sm text-muted-foreground text-center">Searching...</div>}
+          {!isLoading && results && results.length === 0 && (
+            <div className="p-3 text-sm text-muted-foreground text-center">No results found</div>
+          )}
+          {!isLoading && results && results.length > 0 && results.map((res: any, idx: number) => (
+            <div 
+              key={idx} 
+              className="p-3 hover:bg-sidebar-accent cursor-pointer flex justify-between items-center border-b border-sidebar-border/30 last:border-0"
+              onClick={() => {
+                const baseSymbol = res.symbol.replace(".NS", "").replace(".BO", "");
+                setQuery(baseSymbol);
+                onSelect(baseSymbol);
+                setIsOpen(false);
+              }}
+            >
+              <div>
+                <div className="font-bold text-white text-sm">{res.symbol}</div>
+                <div className="text-xs text-muted-foreground line-clamp-1">{res.shortname || res.longname}</div>
+              </div>
+              <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                {res.exchDisp}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FundamentalAnalysisPage() {
   const [searchInput, setSearchInput] = useState("RELIANCE");
   const [activeSymbol, setActiveSymbol] = useState("RELIANCE");
@@ -59,6 +136,17 @@ export default function FundamentalAnalysisPage() {
     queryFn: async () => {
       const res = await fetch(`/api/fundamentals/${activeSymbol}`);
       if (!res.ok) throw new Error("Failed to fetch fundamental data");
+      return res.json();
+    },
+    enabled: !!activeSymbol,
+    retry: false
+  });
+
+  const { data: newsData, isLoading: isNewsLoading } = useQuery({
+    queryKey: ["fundamentals-news", activeSymbol],
+    queryFn: async () => {
+      const res = await fetch(`/api/fundamentals/${activeSymbol}/news`);
+      if (!res.ok) throw new Error("Failed to fetch news");
       return res.json();
     },
     enabled: !!activeSymbol,
@@ -93,7 +181,9 @@ export default function FundamentalAnalysisPage() {
     if (data) analyzeMutation.mutate(data);
   };
 
-  const earningsChartData = data?.earnings ? transformEarnings(data.earnings) : [];
+  const earningsChartData = useMemo(() => {
+    return data?.earnings ? transformEarnings(data.earnings) : [];
+  }, [data?.earnings]);
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -106,18 +196,10 @@ export default function FundamentalAnalysisPage() {
           <p className="text-muted-foreground mt-1">Deep-dive valuation, AI thesis, and financial health metrics.</p>
         </div>
 
-        <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto">
-          <Input 
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Enter symbol (e.g., RELIANCE)"
-            className="w-full md:w-64 bg-sidebar font-mono uppercase"
-          />
-          <Button type="submit" variant="default" className="font-mono" disabled={isLoading}>
-            <Search className="h-4 w-4 mr-2" />
-            SEARCH
-          </Button>
-        </form>
+        <SymbolSearch onSelect={(sym) => {
+          setActiveSymbol(sym);
+          analyzeMutation.reset();
+        }} />
       </div>
 
       {isLoading && (
@@ -462,6 +544,112 @@ export default function FundamentalAnalysisPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Activities and News */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:col-span-3">
+              {/* Activities */}
+              <Card className="bg-sidebar border-sidebar-border/50 shadow-sm transition-all hover:shadow-md lg:col-span-1">
+                <CardHeader className="pb-2 border-b border-sidebar-border/30">
+                  <CardTitle className="text-sm font-mono flex items-center gap-2 text-muted-foreground">
+                    <CalendarDays className="h-4 w-4 text-warning" />
+                    ACTIVITIES & EVENTS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {data.calendarEvents?.earnings ? (
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-md">
+                      <div className="text-xs text-muted-foreground font-mono mb-1 uppercase">Next Earnings Date</div>
+                      <div className="font-bold text-sm text-white">
+                        {data.calendarEvents.earnings.earningsDate?.[0] ? new Date(data.calendarEvents.earnings.earningsDate[0]).toLocaleDateString() : "N/A"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Est. Average: {data.calendarEvents.earnings.earningsAverage ? data.calendarEvents.earnings.earningsAverage.toFixed(2) : "N/A"}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">No earnings data available.</div>
+                  )}
+
+                  {data.calendarEvents?.exDividendDate && (
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-md">
+                      <div className="text-xs text-muted-foreground font-mono mb-1 uppercase">Ex-Dividend Date</div>
+                      <div className="font-bold text-sm text-white">
+                        {new Date(data.calendarEvents.exDividendDate).toLocaleDateString()}
+                      </div>
+                    </div>
+                  )}
+
+                  {data.recommendationTrend?.trend?.[0] && (
+                    <div className="p-3 bg-sidebar-accent/30 border border-sidebar-border/50 rounded-md">
+                      <div className="text-xs text-muted-foreground font-mono mb-2 uppercase">Analyst Recommendations</div>
+                      <div className="flex justify-between items-center text-xs mb-1">
+                        <span className="text-success">Strong Buy</span>
+                        <span className="font-bold">{data.recommendationTrend.trend[0].strongBuy}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs mb-1">
+                        <span className="text-success">Buy</span>
+                        <span className="font-bold">{data.recommendationTrend.trend[0].buy}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs mb-1">
+                        <span className="text-muted-foreground">Hold</span>
+                        <span className="font-bold">{data.recommendationTrend.trend[0].hold}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-destructive">Sell</span>
+                        <span className="font-bold">{data.recommendationTrend.trend[0].sell}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* News */}
+              <Card className="bg-sidebar border-sidebar-border/50 shadow-sm transition-all hover:shadow-md lg:col-span-2">
+                <CardHeader className="pb-2 border-b border-sidebar-border/30">
+                  <CardTitle className="text-sm font-mono flex items-center gap-2 text-muted-foreground">
+                    <Newspaper className="h-4 w-4 text-primary" />
+                    RECENT NEWS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {isNewsLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : newsData && newsData.length > 0 ? (
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                      {newsData.map((item: any) => (
+                        <a 
+                          key={item.uuid} 
+                          href={item.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block p-4 rounded-md border border-sidebar-border/50 hover:bg-sidebar-accent/50 transition-colors group"
+                        >
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="space-y-1">
+                              <h4 className="font-medium text-sm text-white group-hover:text-primary transition-colors line-clamp-2">
+                                {item.title}
+                              </h4>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{item.publisher}</span>
+                                <span>•</span>
+                                <span>{new Date(item.providerPublishTime * 1000).toLocaleString()}</span>
+                              </div>
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic p-4 text-center">
+                      No recent news found for this symbol.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       )}

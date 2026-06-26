@@ -4,6 +4,7 @@ import {
   useGetSignals, 
   getGetSignalsQueryKey, 
   useGenerateSignals,
+  useGetMarketNewsSentiment,
   GetSignalsType,
   GetSignalsAction,
   GetSignalsStatus
@@ -19,6 +20,31 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, TerminalSquare, Cpu, BrainCircuit, Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+function SignalSentimentBadge({ symbol }: { symbol: string }) {
+  const { data, isLoading } = useGetMarketNewsSentiment({ symbol });
+
+  if (isLoading) {
+    return (
+      <Badge variant="outline" className="font-mono text-[10px] border-muted/50 text-muted-foreground animate-pulse">
+        SENTIMENT: LOADING...
+      </Badge>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <Badge variant="outline" className={cn(
+      "font-mono text-[10px] border-0 px-2 py-0.5 font-bold uppercase",
+      data.sentiment === "BULLISH" ? "bg-success/15 text-success" :
+      data.sentiment === "BEARISH" ? "bg-destructive/15 text-destructive" :
+      "bg-warning/15 text-warning"
+    )} title={data.summary}>
+      NEWS: {data.sentiment} ({data.score}%)
+    </Badge>
+  );
+}
 
 function SchedulerBar({
   onExpire,
@@ -69,11 +95,13 @@ function SchedulerBar({
 }
 
 export default function SignalsBoard() {
+  const { settings } = useSettings();
   const [type, setType] = useState<GetSignalsType | "ALL">("ALL");
   const [action, setAction] = useState<GetSignalsAction | "ALL">("ALL");
   const [status, setStatus] = useState<GetSignalsStatus | "ALL">("ACTIVE");
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [executingId, setExecutingId] = useState<number | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<string>(settings.agentProvider || "fallback");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -128,9 +156,9 @@ export default function SignalsBoard() {
   const generateSignals = useGenerateSignals();
 
   const handleGenerate = () => {
-    generateSignals.mutate({ data: { timeframe: "INTRADAY" } }, {
+    generateSignals.mutate({ data: { timeframe: "INTRADAY", provider: selectedProvider } }, {
       onSuccess: () => {
-        toast({ title: "Signals Generated", description: "New trading signals have been generated." });
+        toast({ title: "Signals Generated", description: `New trading signals generated using ${selectedProvider === "fallback" ? "Auto Fallback" : selectedProvider.toUpperCase()}.` });
         queryClient.invalidateQueries({ queryKey: getGetSignalsQueryKey() });
       },
       onError: () => {
@@ -189,10 +217,24 @@ export default function SignalsBoard() {
             paused={paused}
             onRefresh={refresh}
           />
-          <div className="flex items-center gap-1 text-xs font-mono text-muted-foreground border border-muted rounded-sm px-2 py-1">
-            <Cpu className="h-3 w-3 text-success" />
-            NVIDIA QWEN
-          </div>
+          <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+            <SelectTrigger className="w-[180px] font-mono border-muted bg-card text-xs h-9">
+              <Cpu className="mr-1.5 h-3.5 w-3.5 text-primary/80" />
+              <SelectValue placeholder="AI PROVIDER" />
+            </SelectTrigger>
+            <SelectContent className="font-mono text-xs">
+              <SelectItem value="fallback">Auto Fallback</SelectItem>
+              <SelectItem value="nvidia">NVIDIA NIM (Llama 3.3)</SelectItem>
+              <SelectItem value="openai">ChatGPT (GPT-4o)</SelectItem>
+              <SelectItem value="claude">Anthropic Claude</SelectItem>
+              <SelectItem value="gemini">Google Gemini</SelectItem>
+              <SelectItem value="gemma">Google Gemma</SelectItem>
+              <SelectItem value="ollama">Ollama Local AI</SelectItem>
+              <SelectItem value="deepseek">DeepSeek AI</SelectItem>
+              <SelectItem value="groq">Groq Fast Inference</SelectItem>
+              <SelectItem value="openmodel">OpenModel</SelectItem>
+            </SelectContent>
+          </Select>
           <Button 
             onClick={handleGenerate} 
             disabled={generateSignals.isPending}
@@ -276,6 +318,7 @@ export default function SignalsBoard() {
                       <span className="font-bold text-lg tracking-tight">{signal.displayText}</span>
                       <Badge variant="secondary" className="font-mono text-xs">{signal.timeframe}</Badge>
                       <Badge variant="outline" className="font-mono text-xs border-muted">{signal.instrumentType}</Badge>
+                      <SignalSentimentBadge symbol={signal.symbol} />
                     </div>
                     <p className="text-sm text-muted-foreground max-w-2xl">{signal.rationale}</p>
                   </div>

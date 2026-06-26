@@ -11,4 +11,6 @@ export interface GenerateSignalsInput {
   /** List of symbols to analyze; empty means use watchlist */
   symbols?: string[];
   timeframe?: GenerateSignalsInputTimeframe;
+  /** Preferred AI provider / LLM engine to generate signals */
+  provider?: string;
 }

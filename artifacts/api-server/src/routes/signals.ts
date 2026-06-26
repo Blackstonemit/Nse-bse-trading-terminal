@@ -71,9 +71,10 @@ router.get("/signals/:id", async (req, res) => {
 
 router.post("/signals/generate", async (req, res) => {
   try {
-    const { symbols = [], timeframe = "INTRADAY" } = req.body as {
+    const { symbols = [], timeframe = "INTRADAY", provider = "fallback" } = req.body as {
       symbols?: string[];
       timeframe?: string;
+      provider?: string;
     };
 
     const targetSymbols =
@@ -122,7 +123,7 @@ Generate a JSON signal with this exact structure:
         const response = await callWithFallback([
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
-        ], { maxTokens: 1024 });
+        ], { maxTokens: 1024, preferredProvider: provider });
 
         const content = response.content;
         let signalData: any;

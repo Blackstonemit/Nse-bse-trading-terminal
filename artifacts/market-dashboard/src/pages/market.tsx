@@ -13,8 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import React from "react";
 
-function QuoteTable({ data, isLoading }: { data: any[], isLoading: boolean }) {
+const QuoteTable = React.memo(function QuoteTable({ data, isLoading }: { data: any[], isLoading: boolean }) {
   if (isLoading) {
     return (
       <div className="space-y-2 p-4">
@@ -65,7 +66,7 @@ function QuoteTable({ data, isLoading }: { data: any[], isLoading: boolean }) {
       </TableBody>
     </Table>
   );
-}
+});
 
 export default function MarketFeed() {
   const queryClient = useQueryClient();

@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
-import { getProvidersStatus, saveProviderKey, toggleProvider } from "../lib/multi-ai";
+import { getProvidersStatus, saveProviderKey, toggleProvider, testProvider } from "../lib/multi-ai";
 
 const router: IRouter = Router();
 
-const DB_PROVIDERS = ["openai", "claude", "gemini", "nvidia", "ollama", "gemma", "deepseek", "groq"] as const;
+const DB_PROVIDERS = ["openai", "claude", "gemini", "nvidia", "ollama", "gemma", "deepseek", "groq", "openmodel"] as const;
 type DbProvider = (typeof DB_PROVIDERS)[number];
 
 function isDbProvider(p: string): p is DbProvider {
@@ -57,6 +57,21 @@ router.patch("/ai-providers/:provider/toggle", async (req: any, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to toggle provider");
     res.status(500).json({ error: "Failed to toggle provider" });
+  }
+});
+
+router.post("/ai-providers/:provider/test", async (req: any, res) => {
+  try {
+    const { provider } = req.params;
+    if (!isDbProvider(provider)) {
+      res.status(400).json({ error: "Invalid provider" });
+      return;
+    }
+    const response = await testProvider(provider as any, req.user!.id);
+    res.json({ success: true, response });
+  } catch (err: any) {
+    req.log.error({ err }, "Failed to test provider");
+    res.status(500).json({ error: err.message || "Failed to test provider" });
   }
 });
 

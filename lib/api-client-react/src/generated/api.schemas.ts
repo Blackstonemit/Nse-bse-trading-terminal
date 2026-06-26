@@ -297,6 +297,8 @@ export interface GenerateSignalsInput {
   /** List of symbols to analyze; empty means use watchlist */
   symbols?: string[];
   timeframe?: GenerateSignalsInputTimeframe;
+  /** Preferred AI provider / LLM engine to generate signals */
+  provider?: string;
 }
 
 export type WatchlistItemExchange =
@@ -435,6 +437,24 @@ export interface NewsAnalysisResult {
   risks: string[];
 }
 
+export type SymbolSentimentSentiment =
+  (typeof SymbolSentimentSentiment)[keyof typeof SymbolSentimentSentiment];
+
+export const SymbolSentimentSentiment = {
+  BULLISH: "BULLISH",
+  BEARISH: "BEARISH",
+  NEUTRAL: "NEUTRAL",
+} as const;
+
+export interface SymbolSentiment {
+  symbol: string;
+  sentiment: SymbolSentimentSentiment;
+  score: number;
+  summary: string;
+  catalysts: string[];
+  risks: string[];
+}
+
 export type GetMarketQuotesParams = {
   /**
    * Comma-separated NSE symbols e.g. RELIANCE,NIFTY50,BANKNIFTY
@@ -497,6 +517,13 @@ export const GetMarketHistoryPeriod = {
   "6mo": "6mo",
   "1y": "1y",
 } as const;
+
+export type GetMarketNewsSentimentParams = {
+  /**
+   * The stock symbol to analyze
+   */
+  symbol: string;
+};
 
 export type GetTechnicalAnalysisParams = {
   symbol: string;

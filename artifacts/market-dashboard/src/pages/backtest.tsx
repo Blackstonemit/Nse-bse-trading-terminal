@@ -422,7 +422,31 @@ export default function BacktestPage() {
         : legs[0].strike - entryPremium * legs[0].direction
       : null;
 
-    return { chartData, maxPnl, minPnl, finalPnl, entryPremium, entryDelta, entryTheta, entrySpot, breakeven, legs, multiplier };
+    // Calculate payoff curve at expiry (T = 0)
+    const payoffCurve = Array.from({ length: 31 }).map((_, idx) => {
+      const pct = -0.15 + (idx * 0.3) / 30; // -15% to +15%
+      const spotAtExpiry = entrySpot * (1 + pct);
+      
+      const valueAtExpiry = legs.reduce(
+        (sum, leg) => {
+          const payoff = leg.type === "CE" 
+            ? Math.max(spotAtExpiry - leg.strike, 0)
+            : Math.max(leg.strike - spotAtExpiry, 0);
+          return sum + leg.direction * payoff;
+        },
+        0
+      );
+      
+      const pnlAtExpiry = (valueAtExpiry - entryPremium) * multiplier;
+      
+      return {
+        spot: Math.round(spotAtExpiry),
+        pnl: Math.round(pnlAtExpiry),
+        label: `${pct >= 0 ? "+" : ""}${(pct * 100).toFixed(0)}%`
+      };
+    });
+
+    return { chartData, maxPnl, minPnl, finalPnl, entryPremium, entryDelta, entryTheta, entrySpot, breakeven, legs, multiplier, payoffCurve };
   }, [history, enabled, strike1, strike2, stratKey, iv, lots, entryDate, expiryDate, settings, activeTab]);
 
   const needsStrike2 = !isSingleLeg(stratKey);
@@ -759,46 +783,82 @@ export default function BacktestPage() {
                 </CardContent>
               </Card>
 
-              {/* P&L Chart */}
-              <Card className="rounded-sm border-muted bg-card">
-                <CardHeader className="p-4 border-b border-muted flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm font-mono">P&L OVER TIME (₹)</CardTitle>
-                  <div className="flex items-center gap-3 text-xs font-mono">
-                    {results.finalPnl >= 0
-                      ? <span className="flex items-center gap-1 text-success"><TrendingUp className="h-3 w-3" /> PROFITABLE</span>
-                      : <span className="flex items-center gap-1 text-destructive"><TrendingDown className="h-3 w-3" /> LOSS</span>}
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={results.chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={results.finalPnl >= 0 ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={results.finalPnl >= 0 ? "#22c55e" : "#ef4444"} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fontFamily: "monospace", fill: "#888" }} />
-                      <YAxis tick={{ fontSize: 10, fontFamily: "monospace", fill: "#888" }}
-                        tickFormatter={(v) => v >= 0 ? `+${(v / 1000).toFixed(1)}K` : `${(v / 1000).toFixed(1)}K`} />
-                      <Tooltip
-                        contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "2px", fontFamily: "monospace", fontSize: 11 }}
-                        formatter={(val: number) => [`₹${fmtPnl(val)}`, "P&L"]}
-                      />
-                      <ReferenceLine y={0} stroke="#555" strokeDasharray="4 4" />
-                      {results.maxPnl > 0 && (
-                        <ReferenceLine y={results.maxPnl} stroke="#22c55e" strokeDasharray="3 3" label={{ value: "Max", fill: "#22c55e", fontSize: 9, fontFamily: "monospace" }} />
-                      )}
-                      {results.minPnl < 0 && (
-                        <ReferenceLine y={results.minPnl} stroke="#ef4444" strokeDasharray="3 3" label={{ value: "Min", fill: "#ef4444", fontSize: 9, fontFamily: "monospace" }} />
-                      )}
-                      <Area type="monotone" dataKey="pnl" stroke={results.finalPnl >= 0 ? "#22c55e" : "#ef4444"}
-                        strokeWidth={2} fill="url(#pnlGrad)" dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* P&L Chart */}
+                <Card className="rounded-sm border-muted bg-card">
+                  <CardHeader className="p-4 border-b border-muted flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-mono">P&L OVER TIME (₹)</CardTitle>
+                    <div className="flex items-center gap-3 text-xs font-mono">
+                      {results.finalPnl >= 0
+                        ? <span className="flex items-center gap-1 text-success"><TrendingUp className="h-3 w-3" /> PROFITABLE</span>
+                        : <span className="flex items-center gap-1 text-destructive"><TrendingDown className="h-3 w-3" /> LOSS</span>}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={results.chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={results.finalPnl >= 0 ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={results.finalPnl >= 0 ? "#22c55e" : "#ef4444"} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10, fontFamily: "monospace", fill: "#888" }} />
+                        <YAxis tick={{ fontSize: 10, fontFamily: "monospace", fill: "#888" }}
+                          tickFormatter={(v) => v >= 0 ? `+${(v / 1000).toFixed(1)}K` : `${(v / 1000).toFixed(1)}K`} />
+                        <Tooltip
+                          contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "2px", fontFamily: "monospace", fontSize: 11 }}
+                          formatter={(val: number) => [`₹${fmtPnl(val)}`, "P&L"]}
+                        />
+                        <ReferenceLine y={0} stroke="#555" strokeDasharray="4 4" />
+                        {results.maxPnl > 0 && (
+                          <ReferenceLine y={results.maxPnl} stroke="#22c55e" strokeDasharray="3 3" label={{ value: "Max", fill: "#22c55e", fontSize: 9, fontFamily: "monospace" }} />
+                        )}
+                        {results.minPnl < 0 && (
+                          <ReferenceLine y={results.minPnl} stroke="#ef4444" strokeDasharray="3 3" label={{ value: "Min", fill: "#ef4444", fontSize: 9, fontFamily: "monospace" }} />
+                        )}
+                        <Area type="monotone" dataKey="pnl" stroke={results.finalPnl >= 0 ? "#22c55e" : "#ef4444"}
+                          strokeWidth={2} fill="url(#pnlGrad)" dot={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Payoff Profile Chart at Expiry */}
+                <Card className="rounded-sm border-muted bg-card">
+                  <CardHeader className="p-4 border-b border-muted flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-mono">PAYOFF DIAGRAM AT EXPIRY (₹)</CardTitle>
+                    <div className="flex items-center gap-1 text-xs font-mono text-muted-foreground">
+                      <span>Max Loss/Risk capped at Strike boundaries</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={results.payoffCurve} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="payoffGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="spot" tick={{ fontSize: 9, fontFamily: "monospace", fill: "#888" }} />
+                        <YAxis tick={{ fontSize: 10, fontFamily: "monospace", fill: "#888" }}
+                          tickFormatter={(v) => v >= 0 ? `+${(v / 1000).toFixed(1)}K` : `${(v / 1000).toFixed(1)}K`} />
+                        <Tooltip
+                          contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "2px", fontFamily: "monospace", fontSize: 11 }}
+                          formatter={(val: number) => [`₹${val.toLocaleString()}`, "P&L at Expiry"]}
+                        />
+                        <ReferenceLine y={0} stroke="#555" strokeDasharray="4 4" />
+                        <ReferenceLine x={results.entrySpot} stroke="#3b82f6" strokeDasharray="3 3" label={{ value: "Entry Spot", fill: "#3b82f6", fontSize: 9, fontFamily: "monospace" }} />
+                        <Area type="monotone" dataKey="pnl" stroke="#3b82f6"
+                          strokeWidth={2} fill="url(#payoffGrad)" dot={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Daily table */}
               <Card className="rounded-sm border-muted bg-card">

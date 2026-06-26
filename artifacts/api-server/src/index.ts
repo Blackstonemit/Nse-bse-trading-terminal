@@ -2,6 +2,19 @@ import "./load-env";
 process.env.TZ = "Asia/Kolkata";
 import app from "./app";
 import { logger } from "./lib/logger";
+
+process.on("uncaughtException", (err: any) => {
+  if (err?.code === "UND_ERR_SOCKET" || err?.message?.includes("other side closed") || err?.code === "ECONNRESET") {
+    logger.warn({ err }, "Ignored undici socket error to prevent server crash");
+    return;
+  }
+  logger.error({ err }, "Uncaught Exception");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason: any) => {
+  logger.error({ reason }, "Unhandled Rejection");
+});
 import { startScheduler } from "./lib/scheduler";
 import { initDb } from "@workspace/db";
 

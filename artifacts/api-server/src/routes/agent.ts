@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { signals } from "@workspace/db";
 import { computeTechnicals } from "./analysis";
 import { callWithFallback } from "../lib/multi-ai";
+import { fetchNewsForSymbol } from "./news";
 
 const router: IRouter = Router();
 
@@ -122,7 +123,10 @@ If ${instrumentType} is OPTIONS, suggest specific strike prices and expiries. On
 
     try {
       if (styleKey === "committee") {
-        const [techRes, riskRes] = await Promise.all([
+        const newsItems = await fetchNewsForSymbol(symbol);
+        const newsContext = newsItems.map(n => `- [${n.source}] ${n.headline}`).join("\n");
+
+        const [techRes, riskRes, fundRes] = await Promise.all([
           callWithFallback([
             { role: "system", content: "You are a Technical Analyst. Analyze the indicators and suggest a trade direction." },
             { role: "user", content: `Technical data for ${symbol}:\n${techContext}` }
@@ -130,6 +134,10 @@ If ${instrumentType} is OPTIONS, suggest specific strike prices and expiries. On
           callWithFallback([
             { role: "system", content: "You are a Risk Manager. Focus on stop-losses, risk/reward ratios, and market volatility." },
             { role: "user", content: `Risk analysis for ${symbol} given technicals:\n${techContext}` }
+          ], { maxTokens: 500, preferredProvider: provider }),
+          callWithFallback([
+            { role: "system", content: "You are a Fundamental Analyst. Focus on recent news sentiment, macroeconomic factors, and potential catalysts. Output a sentiment score (-100 to 100) and analysis." },
+            { role: "user", content: `Recent news for ${symbol}:\n${newsContext}` }
           ], { maxTokens: 500, preferredProvider: provider })
         ]);
 
@@ -139,6 +147,9 @@ ${techRes.content}
 
 Here is the Risk Manager's view:
 ${riskRes.content}
+
+Here is the Fundamental Analyst's view (News & Sentiment):
+${fundRes.content}
 
 ${userPrompt}`;
 

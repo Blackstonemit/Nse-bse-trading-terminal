@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import YahooFinanceClass from "yahoo-finance2";
 import { z } from "zod";
+import { globalCache } from "../lib/cache.js";
 
 const yahooFinance = new (YahooFinanceClass as any)();
 const router: IRouter = Router();
@@ -32,6 +33,12 @@ router.get("/fundamentals/:symbol", async (req, res) => {
     }
 
     const yahooSym = toYahooSymbol(symbol);
+    const cacheKey = `fund_${yahooSym}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
     
     // Fetch multiple modules including historical earnings and recommendations
     const queryOptions = {
@@ -42,7 +49,9 @@ router.get("/fundamentals/:symbol", async (req, res) => {
         "price",
         "incomeStatementHistory",
         "earnings",
-        "recommendationTrend"
+        "recommendationTrend",
+        "calendarEvents",
+        "assetProfile"
       ] as const
     };
     
@@ -53,7 +62,7 @@ router.get("/fundamentals/:symbol", async (req, res) => {
       return;
     }
 
-    res.json({
+    const responseData = {
       symbol: symbol.toUpperCase(),
       yahooSymbol: yahooSym,
       summaryDetail: data.summaryDetail || null,
@@ -63,11 +72,91 @@ router.get("/fundamentals/:symbol", async (req, res) => {
       incomeStatementHistory: data.incomeStatementHistory || null,
       earnings: data.earnings || null,
       recommendationTrend: data.recommendationTrend || null,
+      calendarEvents: data.calendarEvents || null,
+      assetProfile: data.assetProfile || null,
       updatedAt: new Date().toISOString()
-    });
+    };
+    globalCache.set(cacheKey, responseData, 300000); // 5 minutes
+    res.json(responseData);
   } catch (err) {
     req.log.error({ err, symbol: req.params.symbol }, "Failed to fetch fundamental data");
     res.status(500).json({ error: "Failed to fetch fundamental data" });
+  }
+});
+
+router.get("/fundamentals/:symbol/news", async (req, res) => {
+  try {
+    const symbol = req.params.symbol;
+    if (!symbol || typeof symbol !== "string") {
+      res.status(400).json({ error: "Invalid symbol parameter" });
+      return;
+    }
+
+    const yahooSym = toYahooSymbol(symbol);
+    const cacheKey = `news_${yahooSym}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+    
+    let newsResult: any[] = [];
+    try {
+      const result = await yahooFinance.search(yahooSym, { newsCount: 5, quotesCount: 0 });
+      newsResult = result.news || [];
+    } catch (err: any) {
+      // Handle Yahoo schema validation errors on quotes that shouldn't affect news fetch
+      if (err.name === 'FailedYahooValidationError' && err.result && err.result.news) {
+        newsResult = err.result.news;
+      } else {
+        throw err;
+      }
+    }
+
+    globalCache.set(cacheKey, newsResult, 300000); // 5 minutes
+    res.json(newsResult);
+  } catch (err) {
+    req.log.error({ err, symbol: req.params.symbol }, "Failed to fetch news data");
+    res.status(500).json({ error: "Failed to fetch news data" });
+  }
+});
+
+router.get("/fundamentals/search", async (req, res) => {
+  try {
+    const query = req.query.q as string;
+    if (!query || typeof query !== "string") {
+      res.status(400).json({ error: "Invalid query parameter" });
+      return;
+    }
+
+    const cacheKey = `fund_search_${query.toLowerCase()}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    let quotes: any[] = [];
+    try {
+      const result = await yahooFinance.search(query, { quotesCount: 8, newsCount: 0 });
+      quotes = result.quotes || [];
+    } catch (err: any) {
+      // Handle Yahoo schema validation errors 
+      if (err.name === 'FailedYahooValidationError' && err.result && err.result.quotes) {
+        quotes = err.result.quotes;
+      } else {
+        throw err;
+      }
+    }
+
+    // Filter to only EQUITY or INDEX
+    const filtered = quotes.filter((q) => q.quoteType === "EQUITY" || q.quoteType === "INDEX" || q.quoteType === "ETF");
+
+    globalCache.set(cacheKey, filtered, 300000); // 5 minutes
+    res.json(filtered);
+  } catch (err) {
+    req.log.error({ err, query: req.query.q }, "Failed to fetch search data");
+    res.status(500).json({ error: "Failed to fetch search data" });
   }
 });
 

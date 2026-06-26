@@ -11,7 +11,7 @@ import { Settings2, RefreshCw, BarChart2, Eye, Save, RotateCcw, BrainCircuit, Sl
 import { cn } from "@/lib/utils";
 
 type ProviderStatus = {
-  provider: "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "groq";
+  provider: "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "groq" | "openmodel";
   configured: boolean;
   enabled: boolean;
   isDefault: boolean;
@@ -24,28 +24,28 @@ const PROVIDER_META: Record<string, { label: string; color: string; keyUrl: stri
     color: "text-green-400",
     keyUrl: "https://build.nvidia.com/explore/discover",
     keyHint: "nvapi-...",
-    model: "Qwen 3.5 122B",
+    model: "Llama 3.3 70B",
   },
   openai: {
     label: "ChatGPT",
     color: "text-blue-400",
     keyUrl: "https://platform.openai.com/api-keys",
     keyHint: "sk-...",
-    model: "GPT-4o Mini",
+    model: "GPT-4o",
   },
   claude: {
     label: "Anthropic Claude",
     color: "text-orange-400",
     keyUrl: "https://console.anthropic.com/settings/keys",
     keyHint: "sk-ant-...",
-    model: "Claude 3.5 Haiku",
+    model: "Claude 3.7 Sonnet",
   },
   gemini: {
     label: "Google Gemini",
     color: "text-yellow-400",
     keyUrl: "https://aistudio.google.com/apikey",
     keyHint: "AIza...",
-    model: "Gemini 1.5 Flash",
+    model: "Gemini 2.5 Pro",
   },
   gemma: {
     label: "Google Gemma",
@@ -66,14 +66,21 @@ const PROVIDER_META: Record<string, { label: string; color: string; keyUrl: stri
     color: "text-blue-500",
     keyUrl: "https://platform.deepseek.com",
     keyHint: "sk-...",
-    model: "DeepSeek-V3",
+    model: "DeepSeek-Reasoner",
   },
   groq: {
     label: "Groq Fast Inference",
     color: "text-red-500",
     keyUrl: "https://console.groq.com/keys",
     keyHint: "gsk_...",
-    model: "Llama 3.1 8B",
+    model: "Llama 3.3 70B",
+  },
+  openmodel: {
+    label: "OpenModel",
+    color: "text-indigo-400",
+    keyUrl: "https://console.openmodel.ai",
+    keyHint: "om-...",
+    model: "DeepSeek V4 Flash",
   },
 };
 
@@ -84,6 +91,7 @@ function AIProvidersCard() {
   const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [testing, setTesting] = useState<Record<string, boolean>>({});
 
   // Local state for Ollama fields
   const [ollamaHost, setOllamaHost] = useState("http://localhost:11434");
@@ -142,6 +150,26 @@ function AIProvidersCard() {
       toast({ title: "Error", description: "Failed to save API key.", variant: "destructive" });
     } finally {
       setSaving((p) => ({ ...p, [provider]: false }));
+    }
+  };
+
+  const handleTestProvider = async (provider: string) => {
+    setTesting((p) => ({ ...p, [provider]: true }));
+    try {
+      const res = await fetch(`/api/ai-providers/${provider}/test`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Test failed");
+      toast({
+        title: `${PROVIDER_META[provider].label} Test Success`,
+        description: data.response || "Connection successful.",
+        variant: "default",
+      });
+    } catch (err: any) {
+      toast({ title: "Test Failed", description: err.message || "Failed to connect to AI provider.", variant: "destructive" });
+    } finally {
+      setTesting((p) => ({ ...p, [provider]: false }));
     }
   };
 
@@ -246,6 +274,16 @@ function AIProvidersCard() {
                           <Button
                             type="button"
                             size="sm"
+                            variant="secondary"
+                            onClick={() => handleTestProvider("ollama")}
+                            disabled={testing["ollama"] || saving["ollama"] || !p.configured}
+                            className="font-mono text-xs h-8 shrink-0"
+                          >
+                            {testing["ollama"] ? <Loader2 className="h-3 w-3 animate-spin" /> : "TEST"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
                             onClick={() => handleSaveKey("ollama", JSON.stringify({ host: ollamaHost, model: ollamaModel }))}
                             disabled={saving["ollama"] || !ollamaHost || !ollamaModel}
                             className="font-mono text-xs h-8 shrink-0"
@@ -287,6 +325,16 @@ function AIProvidersCard() {
                       >
                         <ExternalLink className="h-3 w-3" />
                         GET KEY
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleTestProvider(p.provider)}
+                        disabled={testing[p.provider] || saving[p.provider] || !p.configured}
+                        className="font-mono text-xs h-8 shrink-0"
+                      >
+                        {testing[p.provider] ? <Loader2 className="h-3 w-3 animate-spin" /> : "TEST"}
                       </Button>
                       <Button
                         type="submit"
@@ -493,6 +541,16 @@ export default function SettingsDashboard() {
         <Card className="rounded-sm border-muted bg-card">
           <SectionHeader icon={Eye} title="DISPLAY" />
           <CardContent className="p-4">
+            <Row label="Theme" hint="Choose the application color theme">
+              <Select value={local.theme} onValueChange={(v: "light" | "dark" | "system") => set("theme", v)}>
+                <SelectTrigger className="w-36 font-mono border-muted bg-background text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </Row>
             <Row label="Show Synthetic Data" hint="Show synthetic options data when live NSE feed is unavailable">
               <Toggle checked={local.showSyntheticData} onChange={(v) => set("showSyntheticData", v)} />
             </Row>
@@ -567,7 +625,7 @@ export default function SettingsDashboard() {
                   />
                   <span className={cn("font-mono font-bold text-sm w-8",
                     local.agentConfidenceThreshold >= 70 ? "text-green-400" :
-                    local.agentConfidenceThreshold >= 40 ? "text-yellow-400" : "text-muted-foreground"
+                      local.agentConfidenceThreshold >= 40 ? "text-yellow-400" : "text-muted-foreground"
                   )}>{local.agentConfidenceThreshold}%</span>
                 </div>
               </Row>
@@ -593,6 +651,7 @@ export default function SettingsDashboard() {
                     <SelectItem value="ollama">Ollama Local AI</SelectItem>
                     <SelectItem value="deepseek">DeepSeek AI</SelectItem>
                     <SelectItem value="groq">Groq Fast Inference</SelectItem>
+                    <SelectItem value="openmodel">OpenModel</SelectItem>
                   </SelectContent>
                 </Select>
               </Row>
@@ -616,8 +675,8 @@ export default function SettingsDashboard() {
                     local.agentStyle === s
                       ? s === "conservative" ? "border-blue-500/50 bg-blue-500/10"
                         : s === "moderate" ? "border-yellow-500/50 bg-yellow-500/10"
-                        : s === "committee" ? "border-purple-500/50 bg-purple-500/10"
-                        : "border-red-500/50 bg-red-500/10"
+                          : s === "committee" ? "border-purple-500/50 bg-purple-500/10"
+                            : "border-red-500/50 bg-red-500/10"
                       : "border-muted bg-muted/5 hover:bg-muted/20"
                   )}
                 >

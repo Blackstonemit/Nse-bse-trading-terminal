@@ -4,7 +4,7 @@ import { db, providerSettings } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "./logger";
 
-export type AIProvider = "inference" | "nvidia" | "openai" | "gemini" | "claude" | "ollama" | "deepseek" | "gemma" | "groq";
+export type AIProvider = "inference" | "nvidia" | "openai" | "gemini" | "claude" | "ollama" | "deepseek" | "gemma" | "groq" | "openmodel";
 
 export type AIMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -19,14 +19,15 @@ const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 const PROVIDER_MODELS: Record<Exclude<AIProvider, "ollama">, string> = {
-  inference: "openrouter/claude-3-5-sonnet",
-  nvidia: process.env["NVIDIA_MODEL"] ?? "qwen/qwen3.5-122b-a10b",
-  openai: "gpt-4o-mini",
-  gemini: "gemini-1.5-flash",
-  claude: "claude-3-5-haiku-20241022",
-  deepseek: "deepseek-chat", // Resolves to V3 or R1 via endpoint
+  inference: "openrouter/claude-3-7-sonnet",
+  nvidia: process.env["NVIDIA_MODEL"] ?? "meta/llama-3.3-70b-instruct",
+  openai: "gpt-4o",
+  gemini: "gemini-2.5-pro",
+  claude: "claude-3-7-sonnet-20250219",
+  deepseek: "deepseek-reasoner",
   gemma: "gemma-4-31b-it",
-  groq: "llama-3.1-8b-instant",
+  groq: "llama-3.3-70b-versatile",
+  openmodel: "deepseek-v4-flash",
 };
 
 function makeOpenAIClient(provider: Exclude<AIProvider, "claude" | "ollama">, apiKey: string): OpenAI {
@@ -41,6 +42,9 @@ function makeOpenAIClient(provider: Exclude<AIProvider, "claude" | "ollama">, ap
   }
   if (provider === "groq") {
     return new OpenAI({ apiKey, baseURL: GROQ_BASE_URL });
+  }
+  if (provider === "openmodel") {
+    return new OpenAI({ apiKey, baseURL: "https://api.openmodel.ai/v1" });
   }
   return new OpenAI({ apiKey });
 }
@@ -74,6 +78,9 @@ export async function getProviderKey(provider: AIProvider, userId?: string): Pro
   }
   if (provider === "gemma") {
     return process.env["GEMMA_API_KEY"] ?? process.env["GEMINI_API_KEY"] ?? null;
+  }
+  if (provider === "openmodel") {
+    return process.env["OPENMODEL_API_KEY"] ?? null;
   }
   return null;
 }
@@ -157,7 +164,7 @@ async function callInferenceSh(model: string, messages: AIMessage[]): Promise<st
   const inputStr = JSON.stringify({ prompt });
   // Escape single quotes for bash string
   const bashSafeInput = inputStr.replace(/'/g, "'\\''");
-  
+
   try {
     const { stdout } = await execAsync(`belt app run ${model} --input '${bashSafeInput}' --raw`);
     return stdout.trim();
@@ -166,11 +173,35 @@ async function callInferenceSh(model: string, messages: AIMessage[]): Promise<st
   }
 }
 
+async function callOpenModel(apiKey: string, model: string, messages: AIMessage[], maxTokens: number): Promise<string> {
+  const response = await fetch("https://api.openmodel.ai/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      input: messages.map(m => ({ role: m.role, content: m.content })),
+      max_output_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenModel API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as any;
+  const content = data.choices?.[0]?.message?.content?.trim();
+  if (!content) throw new Error("Empty response from OpenModel");
+  return content;
+}
+
 export async function callWithFallback(
   messages: AIMessage[],
   options: { maxTokens?: number; preferredProvider?: string; userId?: string } = {}
 ): Promise<AICompletionResult> {
-  const defaultOrder: AIProvider[] = ["inference", "nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "ollama"];
+  const defaultOrder: AIProvider[] = ["inference", "nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "openmodel", "ollama"];
   let order = [...defaultOrder];
 
   if (options.preferredProvider && options.preferredProvider !== "fallback") {
@@ -196,6 +227,8 @@ export async function callWithFallback(
         content = await callOllama(apiKey, messages, maxTokens);
       } else if (provider === "inference") {
         content = await callInferenceSh(PROVIDER_MODELS[provider], messages);
+      } else if (provider === "openmodel") {
+        content = await callOpenModel(apiKey, PROVIDER_MODELS[provider], messages, maxTokens);
       } else {
         const client = makeOpenAIClient(provider, apiKey);
         const model = PROVIDER_MODELS[provider];
@@ -218,6 +251,44 @@ export async function callWithFallback(
   throw new Error("All AI providers failed or are not configured");
 }
 
+export async function testProvider(provider: AIProvider, userId?: string): Promise<string> {
+  const apiKey = await getProviderKey(provider, userId);
+  if (!apiKey) {
+    throw new Error(`Provider ${provider} is not configured or missing an API key.`);
+  }
+
+  const messages: AIMessage[] = [
+    { role: "user", content: "Reply with strictly 'Connection successful' if you receive this message." }
+  ];
+
+  try {
+    let content: string;
+    if (provider === "claude") {
+      content = await callClaude(apiKey, messages, 50);
+    } else if (provider === "ollama") {
+      content = await callOllama(apiKey, messages, 50);
+    } else if (provider === "inference") {
+      content = await callInferenceSh(PROVIDER_MODELS[provider], messages);
+    } else if (provider === "openmodel") {
+      content = await callOpenModel(apiKey, PROVIDER_MODELS[provider], messages, 50);
+    } else {
+      const client = makeOpenAIClient(provider, apiKey);
+      const model = PROVIDER_MODELS[provider];
+      const response = await client.chat.completions.create({
+        model,
+        max_tokens: 50,
+        messages: messages as any,
+      });
+      content = response.choices[0]?.message?.content?.trim() ?? "";
+      if (!content) throw new Error("Empty response");
+    }
+    return "Connection successful.";
+  } catch (error: any) {
+    logger.error({ err: error, provider }, "testProvider failed");
+    throw new Error(`Connection failed: ${error.message || String(error)}`);
+  }
+}
+
 export async function getProvidersStatus(userId: string): Promise<
   Array<{ provider: AIProvider; configured: boolean; enabled: boolean; isDefault: boolean; value?: string }>
 > {
@@ -231,7 +302,7 @@ export async function getProvidersStatus(userId: string): Promise<
   const nvidiaKey = process.env["NVIDIA_API_KEY"];
   const geminiKey = process.env["GEMINI_API_KEY"];
   const gemmaKey = process.env["GEMMA_API_KEY"] ?? process.env["GEMINI_API_KEY"];
-  const providers: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "ollama"];
+  const providers: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "openmodel", "ollama"];
 
   return providers.map((p, idx) => {
     const row = dbMap.get(p);
@@ -250,6 +321,12 @@ export async function getProvidersStatus(userId: string): Promise<
     if (p === "gemma") {
       const hasDbKey = !!row?.apiKey;
       const configured = hasDbKey || !!gemmaKey;
+      const enabled = hasDbKey ? (row?.enabled ?? true) : false;
+      return { provider: p, configured, enabled, isDefault: false, value: row?.apiKey || "" };
+    }
+    if (p === "openmodel") {
+      const hasDbKey = !!row?.apiKey;
+      const configured = hasDbKey || !!process.env["OPENMODEL_API_KEY"];
       const enabled = hasDbKey ? (row?.enabled ?? true) : false;
       return { provider: p, configured, enabled, isDefault: false, value: row?.apiKey || "" };
     }

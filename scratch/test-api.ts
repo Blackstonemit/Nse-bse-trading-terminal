@@ -23,6 +23,20 @@ async function testEndpoints() {
     });
 
     const baseUrl = `http://127.0.0.1:${port}/api`;
+
+    // 1. Authenticate with mock credentials to get a session cookie
+    console.log("Authenticating with mock credentials...");
+    const authRes = await fetch(`${baseUrl}/auth/google/callback?code=mock_auth_code`, {
+      redirect: "manual" // Stop the redirect to capture the cookie
+    });
+    const setCookieHeader = authRes.headers.get("set-cookie") || "";
+    const sessionCookie = setCookieHeader.split(";")[0]; // extract token=xyz
+    
+    if (!sessionCookie) {
+      throw new Error("Failed to receive session cookie from mock auth");
+    }
+    console.log("Session cookie retrieved successfully.");
+
     const tests = [
       { name: "Health check", path: "/healthz" },
       { name: "Market indices", path: "/market/indices" },
@@ -39,7 +53,9 @@ async function testEndpoints() {
 
     for (const test of tests) {
       console.log(`[TEST] Querying ${test.name} (${test.path})...`);
-      const res = await fetch(`${baseUrl}${test.path}`);
+      const res = await fetch(`${baseUrl}${test.path}`, {
+        headers: { Cookie: sessionCookie }
+      });
       console.log(`[RESPONSE] Status: ${res.status} ${res.statusText}`);
       if (!res.ok) {
         const text = await res.text();

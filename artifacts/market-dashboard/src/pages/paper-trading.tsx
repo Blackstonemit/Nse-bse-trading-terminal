@@ -75,6 +75,7 @@ export default function PaperTradingPage() {
   // Action execution state
   const [executingTrade, setExecutingTrade] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   // Fetch performance metrics
   const fetchMetrics = useCallback(async () => {
@@ -271,6 +272,28 @@ export default function PaperTradingPage() {
     }
   };
 
+  // Reset Account
+  const handleResetAccount = async () => {
+    if (!confirm("Are you sure you want to completely reset your paper trading account? All trades and positions will be permanently deleted.")) return;
+    setResetting(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/paper/reset`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Account Reset", description: "Your paper trading account has been reset to its starting balance." });
+        fetchMetrics();
+        fetchTrades();
+      } else {
+        const errorData = await res.json();
+        toast({ title: "Reset Failed", description: errorData.error || "Failed to reset account.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Reset Failed", description: "Network error.", variant: "destructive" });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // Separate Open and Closed Trades for rendering
   const openPositions = trades.filter((t) => t.status === "OPEN");
   const closedTrades = trades.filter((t) => t.status === "CLOSED");
@@ -300,6 +323,16 @@ export default function PaperTradingPage() {
           </div>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleResetAccount} 
+            disabled={resetting}
+            className="h-8 font-mono text-[10px] border-muted bg-card hover:bg-destructive/10 hover:text-destructive transition-colors"
+          >
+            {resetting ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <RefreshCw className="h-3 w-3 mr-1.5" />}
+            RESET ACCOUNT
+          </Button>
           <LiveRefreshBar
             isMarketOpen={isMarketOpen}
             isPreOpen={isPreOpen}

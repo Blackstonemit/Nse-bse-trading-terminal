@@ -12,6 +12,7 @@ export type Settings = {
   defaultTimeframe: "INTRADAY" | "SWING" | "POSITIONAL";
   showSyntheticData: boolean;
   highlightATM: boolean;
+  theme: "light" | "dark" | "system";
   // ── AI Agent settings ───────────────────────────────────────────────────────
   agentInstrumentType: "STOCK" | "INDEX" | "OPTIONS" | "FUTURES";
   agentTimeframe: "INTRADAY" | "SWING" | "POSITIONAL";
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultTimeframe: "INTRADAY",
   showSyntheticData: true,
   highlightATM: true,
+  theme: "dark",
   agentInstrumentType: "STOCK",
   agentTimeframe: "SWING",
   agentStyle: "moderate",
@@ -63,6 +65,7 @@ export function loadSettings(): Settings {
 
 export function saveSettings(s: Settings): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  window.dispatchEvent(new Event("settingsUpdated"));
 }
 
 export function useSettings() {

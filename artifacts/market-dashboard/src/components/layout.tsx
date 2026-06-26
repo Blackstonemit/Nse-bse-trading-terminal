@@ -26,7 +26,7 @@ export function Layout({ children }: LayoutProps) {
   }, [isNewsOpen]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground dark overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Sidebar />
       <main
         className={cn(

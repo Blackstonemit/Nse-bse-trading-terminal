@@ -72,66 +72,61 @@
 }
 
 :root {
-  /* Set to dark mode by default for a trading terminal */
-  color-scheme: dark;
+  color-scheme: light;
   
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --opaque-button-border-intensity: 9;
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -9;
 
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(0,0,0, .04);
+  --elevate-2: rgba(0,0,0, .09);
 
-  /* Zinc black/gray background */
-  --background: 240 5.9% 3.9%; /* #09090b */
-  --foreground: 0 0% 98%;
+  /* Light background */
+  --background: 0 0% 100%; /* white */
+  --foreground: 240 10% 3.9%;
 
-  --border: 240 3.7% 15.9%; /* #1e1e24 approx */
+  --border: 240 5.9% 90%; /* zinc-200 */
 
-  --card: 240 10% 6%; /* #0c0c0f */
-  --card-foreground: 0 0% 98%;
-  --card-border: 240 3.7% 15.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --card-border: 240 5.9% 90%;
 
-  --sidebar: 240 5.9% 3.9%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar: 240 5% 96%; /* zinc-100 */
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-border: 240 5.9% 90%;
   --sidebar-primary: 221.2 83.2% 53.3%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 240 4.9% 83.9%;
+  --sidebar-accent: 240 5.9% 90%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-ring: 240 5% 64.9%;
 
-  --popover: 240 10% 6%;
-  --popover-foreground: 0 0% 98%;
-  --popover-border: 240 3.7% 15.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --popover-border: 240 5.9% 90%;
 
-  /* Primary Accent: Blue (#2563eb) */
   --primary: 221.2 83.2% 53.3%;
   --primary-foreground: 0 0% 98%;
 
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
 
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
 
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
 
-  /* Red for loss/sell */
   --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 98%;
   
-  /* Green for gain/buy */
   --success: 142 71% 45%;
-  --success-foreground: 210 40% 98%;
+  --success-foreground: 0 0% 98%;
   
-  /* Amber for warning/hold */
   --warning: 38 92% 50%;
-  --warning-foreground: 210 40% 98%;
+  --warning-foreground: 0 0% 98%;
 
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
+  --input: 240 5.9% 90%;
+  --ring: 240 5% 64.9%;
   
   --chart-1: 221.2 83.2% 53.3%;
   --chart-2: 142 71% 45%;
@@ -143,7 +138,7 @@
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   
-  --radius: 0.25rem; /* Tight borders for density */
+  --radius: 0.25rem;
   
   --shadow-2xs: 0px 2px 0px 0px hsl(222 47% 4% / 0.1);
   --shadow-xs: 0px 2px 0px 0px hsl(222 47% 4% / 0.1);
@@ -163,9 +158,62 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* Force dark mode */
 .dark {
-  /* Variables are defined in :root for default dark mode */
+  color-scheme: dark;
+  
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+
+  /* Zinc black/gray background */
+  --background: 240 5.9% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --border: 240 3.7% 15.9%;
+
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 98%;
+  --card-border: 240 3.7% 15.9%;
+
+  --sidebar: 240 5.9% 3.9%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-primary: 221.2 83.2% 53.3%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-ring: 240 4.9% 83.9%;
+
+  --popover: 240 10% 6%;
+  --popover-foreground: 0 0% 98%;
+  --popover-border: 240 3.7% 15.9%;
+
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 0 0% 98%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --success: 142 71% 45%;
+  --success-foreground: 210 40% 98%;
+  
+  --warning: 38 92% 50%;
+  --warning-foreground: 210 40% 98%;
+
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
 }
 
 @layer base {

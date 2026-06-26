@@ -2,13 +2,22 @@ import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import app from "../app";
+import { initDb, db, users } from "@workspace/db";
 
 const JWT_SECRET = "trading-terminal-secret-key-change-me";
 
 describe("Edge-to-Edge API Integration Tests", () => {
   let authToken: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    await initDb();
+    // Insert mock user to satisfy foreign key constraints
+    await db.insert(users).values({
+      id: "test-user-id",
+      email: "test@example.com",
+      name: "Test User",
+    }).onConflictDoNothing();
+
     // Generate a valid mock JWT token for the test user
     authToken = jwt.sign(
       {
@@ -46,9 +55,9 @@ describe("Edge-to-Edge API Integration Tests", () => {
       expect(Array.isArray(res.body)).toBe(true);
     });
 
-    it("should filter signals by type (GET /api/signals?type=EQUITY)", async () => {
+    it("should filter signals by type (GET /api/signals?type=STOCK)", async () => {
       const res = await request(app)
-        .get("/api/signals?type=EQUITY")
+        .get("/api/signals?type=STOCK")
         .set("Cookie", [`token=${authToken}`]);
       
       expect(res.status).toBe(200);
@@ -74,13 +83,15 @@ describe("Edge-to-Edge API Integration Tests", () => {
       expect(Array.isArray(res.body)).toBe(true);
     });
     
-    it("should fetch AI providers config (GET /api/ai/providers)", async () => {
+    it("should fetch AI providers config (GET /api/ai-providers/status)", async () => {
       const res = await request(app)
-        .get("/api/ai/providers")
+        .get("/api/ai-providers/status")
         .set("Cookie", [`token=${authToken}`]);
       
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("activeProvider");
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body[0]).toHaveProperty("provider");
     });
   });
 });

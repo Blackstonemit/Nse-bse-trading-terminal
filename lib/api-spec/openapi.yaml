@@ -202,6 +202,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/NewsAnalysisResult"
 
+  /market/news/sentiment:
+    get:
+      operationId: getMarketNewsSentiment
+      tags: [market]
+      summary: Get AI-generated news sentiment analysis for a specific symbol
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The stock symbol to analyze
+      responses:
+        "200":
+          description: News sentiment results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SymbolSentiment"
+
   /analysis/technical:
     get:
       operationId: getTechnicalAnalysis
@@ -851,6 +871,10 @@ components:
           type: string
           enum: [INTRADAY, SWING, POSITIONAL]
           default: INTRADAY
+        provider:
+          type: string
+          default: fallback
+          description: Preferred AI provider / LLM engine to generate signals
       required: []
 
     WatchlistItem:
@@ -1002,3 +1026,25 @@ components:
           items:
             type: string
       required: [marketSentiment, impactScore, summary, catalysts, risks]
+
+    SymbolSentiment:
+      type: object
+      properties:
+        symbol:
+          type: string
+        sentiment:
+          type: string
+          enum: [BULLISH, BEARISH, NEUTRAL]
+        score:
+          type: number
+        summary:
+          type: string
+        catalysts:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+      required: [symbol, sentiment, score, summary, catalysts, risks]

@@ -263,6 +263,22 @@ export const AnalyzeMarketNewsResponse = zod.object({
 });
 
 /**
+ * @summary Get AI-generated news sentiment analysis for a specific symbol
+ */
+export const GetMarketNewsSentimentQueryParams = zod.object({
+  symbol: zod.coerce.string().describe("The stock symbol to analyze"),
+});
+
+export const GetMarketNewsSentimentResponse = zod.object({
+  symbol: zod.string(),
+  sentiment: zod.enum(["BULLISH", "BEARISH", "NEUTRAL"]),
+  score: zod.number(),
+  summary: zod.string(),
+  catalysts: zod.array(zod.string()),
+  risks: zod.array(zod.string()),
+});
+
+/**
  * @summary Get technical indicators for a symbol
  */
 export const getTechnicalAnalysisQueryIntervalDefault = `1d`;
@@ -445,6 +461,7 @@ export const GetSignalResponse = zod.object({
  * @summary Trigger AI agent to generate new trading signals
  */
 export const generateSignalsBodyTimeframeDefault = `INTRADAY`;
+export const generateSignalsBodyProviderDefault = `fallback`;
 
 export const GenerateSignalsBody = zod.object({
   symbols: zod
@@ -454,6 +471,10 @@ export const GenerateSignalsBody = zod.object({
   timeframe: zod
     .enum(["INTRADAY", "SWING", "POSITIONAL"])
     .default(generateSignalsBodyTimeframeDefault),
+  provider: zod
+    .string()
+    .default(generateSignalsBodyProviderDefault)
+    .describe("Preferred AI provider \/ LLM engine to generate signals"),
 });
 
 export const GenerateSignalsResponseItem = zod.object({
