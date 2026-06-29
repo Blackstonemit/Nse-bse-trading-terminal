@@ -455,6 +455,48 @@ export interface SymbolSentiment {
   risks: string[];
 }
 
+export interface MultibaggerStock {
+  symbol: string;
+  name: string;
+  sector: string;
+  marketCapCr: number;
+  peRatio: number;
+  roePercent: number;
+  rocePercent: number;
+  debtToEquity: number;
+  salesCagr3Yr: number;
+  profitCagr3Yr: number;
+  pegRatio: number;
+  promoterHoldingPercent: number;
+  freeCashFlowCr: number;
+  dividendYieldPercent: number;
+  priceToBook: number;
+  fiftyTwoWeekHigh: number;
+  currentPrice: number;
+  relativeStrengthIndex: number;
+  volumeSpikeRatio: number;
+  multibaggerScore: number;
+  tags: string[];
+}
+
+export interface PennyStock {
+  symbol: string;
+  name: string;
+  sector: string;
+  marketCapCr: number;
+  peRatio: number;
+  roePercent: number;
+  rocePercent: number;
+  debtToEquity: number;
+  salesCagr3Yr: number;
+  profitCagr3Yr: number;
+  promoterHoldingPercent: number;
+  currentPrice: number;
+  fiftyTwoWeekHigh: number;
+  turnaroundScore: number;
+  tags: string[];
+}
+
 export type GetMarketQuotesParams = {
   /**
    * Comma-separated NSE symbols e.g. RELIANCE,NIFTY50,BANKNIFTY

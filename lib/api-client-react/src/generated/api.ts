@@ -32,10 +32,12 @@ import type {
   HealthStatus,
   IndexData,
   MarketMovers,
+  MultibaggerStock,
   NewsAnalysisInput,
   NewsAnalysisResult,
   NewsItem,
   OptionsChain,
+  PennyStock,
   PriceHistory,
   Quote,
   RunAgentAnalysisInput,
@@ -911,6 +913,157 @@ export function useGetMarketNewsSentiment<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMarketNewsSentimentQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get multibagger stock screening data for Indian stock exchange symbols
+ */
+export const getGetScreenerMultibaggerUrl = () => {
+  return `/api/screener/multibagger`;
+};
+
+export const getScreenerMultibagger = async (
+  options?: RequestInit,
+): Promise<MultibaggerStock[]> => {
+  return customFetch<MultibaggerStock[]>(getGetScreenerMultibaggerUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetScreenerMultibaggerQueryKey = () => {
+  return [`/api/screener/multibagger`] as const;
+};
+
+export const getGetScreenerMultibaggerQueryOptions = <
+  TData = Awaited<ReturnType<typeof getScreenerMultibagger>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getScreenerMultibagger>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetScreenerMultibaggerQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getScreenerMultibagger>>
+  > = ({ signal }) => getScreenerMultibagger({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getScreenerMultibagger>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetScreenerMultibaggerQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getScreenerMultibagger>>
+>;
+export type GetScreenerMultibaggerQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get multibagger stock screening data for Indian stock exchange symbols
+ */
+
+export function useGetScreenerMultibagger<
+  TData = Awaited<ReturnType<typeof getScreenerMultibagger>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getScreenerMultibagger>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetScreenerMultibaggerQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get high-growth penny and micro-cap stock screening data for Indian stock exchange symbols
+ */
+export const getGetScreenerPennyUrl = () => {
+  return `/api/screener/penny`;
+};
+
+export const getScreenerPenny = async (
+  options?: RequestInit,
+): Promise<PennyStock[]> => {
+  return customFetch<PennyStock[]>(getGetScreenerPennyUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetScreenerPennyQueryKey = () => {
+  return [`/api/screener/penny`] as const;
+};
+
+export const getGetScreenerPennyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getScreenerPenny>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getScreenerPenny>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetScreenerPennyQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getScreenerPenny>>
+  > = ({ signal }) => getScreenerPenny({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getScreenerPenny>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetScreenerPennyQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getScreenerPenny>>
+>;
+export type GetScreenerPennyQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get high-growth penny and micro-cap stock screening data for Indian stock exchange symbols
+ */
+
+export function useGetScreenerPenny<
+  TData = Awaited<ReturnType<typeof getScreenerPenny>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getScreenerPenny>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetScreenerPennyQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

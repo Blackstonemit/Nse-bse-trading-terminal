@@ -15,6 +15,7 @@ import bhavcopyRouter from "./bhavcopy";
 import fundamentalsRouter from "./fundamentals";
 import newsRouter from "./news";
 import orderflowRouter from "./orderflow";
+import screenerRouter from "./screener";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(bhavcopyRouter);
 router.use(fundamentalsRouter);
 router.use("/news", newsRouter);
 router.use("/orderflow", orderflowRouter);
+router.use("/screener", screenerRouter);
 
 export default router;

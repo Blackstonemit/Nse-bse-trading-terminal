@@ -201,7 +201,7 @@ export async function callWithFallback(
   messages: AIMessage[],
   options: { maxTokens?: number; preferredProvider?: string; userId?: string } = {}
 ): Promise<AICompletionResult> {
-  const defaultOrder: AIProvider[] = ["inference", "nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "openmodel", "ollama"];
+  const defaultOrder: AIProvider[] = ["groq", "nvidia", "openmodel", "gemini", "gemma", "openai", "claude", "deepseek", "inference", "ollama"];
   let order = [...defaultOrder];
 
   if (options.preferredProvider && options.preferredProvider !== "fallback") {

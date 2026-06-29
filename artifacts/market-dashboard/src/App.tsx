@@ -28,6 +28,8 @@ const GlobalMarketsPage = lazy(() => import("@/pages/global-markets"));
 const Workspace = lazy(() => import("@/pages/workspace"));
 const NewsPage = lazy(() => import("@/pages/news"));
 const OrderFlowPage = lazy(() => import("@/pages/orderflow"));
+const ScreenerPage = lazy(() => import("@/pages/screener"));
+const PennyScreenerPage = lazy(() => import("@/pages/penny-screener"));
 const LoginPage = lazy(() => import("@/pages/login"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -35,8 +37,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       retry: 1,
       staleTime: 60000, // 1 minute
+      gcTime: 600000, // 10 minutes cache retention
     },
   },
 });
@@ -107,6 +111,8 @@ function Router() {
           <Route path="/workspace" component={Workspace} />
           <Route path="/news" component={NewsPage} />
           <Route path="/orderflow" component={OrderFlowPage} />
+          <Route path="/screener" component={ScreenerPage} />
+          <Route path="/penny-screener" component={PennyScreenerPage} />
           <Route path="/settings" component={SettingsDashboard} />
           <Route component={NotFound} />
         </Switch>

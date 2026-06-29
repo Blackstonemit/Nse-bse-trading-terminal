@@ -222,6 +222,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/SymbolSentiment"
 
+  /screener/multibagger:
+    get:
+      operationId: getScreenerMultibagger
+      tags: [screener]
+      summary: Get multibagger stock screening data for Indian stock exchange symbols
+      responses:
+        "200":
+          description: List of screened multibagger stock candidates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MultibaggerStock"
+
+  /screener/penny:
+    get:
+      operationId: getScreenerPenny
+      tags: [screener]
+      summary: Get high-growth penny and micro-cap stock screening data for Indian stock exchange symbols
+      responses:
+        "200":
+          description: List of screened penny and micro-cap stock candidates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PennyStock"
+
   /analysis/technical:
     get:
       operationId: getTechnicalAnalysis
@@ -1048,3 +1078,89 @@ components:
           items:
             type: string
       required: [symbol, sentiment, score, summary, catalysts, risks]
+
+    MultibaggerStock:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+        marketCapCr:
+          type: number
+        peRatio:
+          type: number
+        roePercent:
+          type: number
+        rocePercent:
+          type: number
+        debtToEquity:
+          type: number
+        salesCagr3Yr:
+          type: number
+        profitCagr3Yr:
+          type: number
+        pegRatio:
+          type: number
+        promoterHoldingPercent:
+          type: number
+        freeCashFlowCr:
+          type: number
+        dividendYieldPercent:
+          type: number
+        priceToBook:
+          type: number
+        fiftyTwoWeekHigh:
+          type: number
+        currentPrice:
+          type: number
+        relativeStrengthIndex:
+          type: number
+        volumeSpikeRatio:
+          type: number
+        multibaggerScore:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+      required: [symbol, name, sector, marketCapCr, peRatio, roePercent, rocePercent, debtToEquity, salesCagr3Yr, profitCagr3Yr, pegRatio, promoterHoldingPercent, freeCashFlowCr, dividendYieldPercent, priceToBook, fiftyTwoWeekHigh, currentPrice, relativeStrengthIndex, volumeSpikeRatio, multibaggerScore, tags]
+
+    PennyStock:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+        marketCapCr:
+          type: number
+        peRatio:
+          type: number
+        roePercent:
+          type: number
+        rocePercent:
+          type: number
+        debtToEquity:
+          type: number
+        salesCagr3Yr:
+          type: number
+        profitCagr3Yr:
+          type: number
+        promoterHoldingPercent:
+          type: number
+        currentPrice:
+          type: number
+        fiftyTwoWeekHigh:
+          type: number
+        turnaroundScore:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+      required: [symbol, name, sector, marketCapCr, peRatio, roePercent, rocePercent, debtToEquity, salesCagr3Yr, profitCagr3Yr, promoterHoldingPercent, currentPrice, fiftyTwoWeekHigh, turnaroundScore, tags]

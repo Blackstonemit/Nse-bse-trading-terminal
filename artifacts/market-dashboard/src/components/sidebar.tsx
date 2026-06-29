@@ -19,13 +19,17 @@ import {
   User as UserIcon,
   Workflow,
   LayoutGrid,
-  BookOpen
+  BookOpen,
+  Rocket,
+  Coins
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Live Dashboard", icon: Activity },
   { href: "/workspace", label: "Custom Workspace", icon: LayoutGrid },
+  { href: "/screener", label: "Multibagger Screener", icon: Rocket },
+  { href: "/penny-screener", label: "Penny Stock Screener", icon: Coins },
   { href: "/signals", label: "Signals Board", icon: TerminalSquare },
   { href: "/scalping", label: "5M Scalper", icon: Zap },
   { href: "/paper-trading", label: "Paper Trader", icon: Wallet },

@@ -279,6 +279,58 @@ export const GetMarketNewsSentimentResponse = zod.object({
 });
 
 /**
+ * @summary Get multibagger stock screening data for Indian stock exchange symbols
+ */
+export const GetScreenerMultibaggerResponseItem = zod.object({
+  symbol: zod.string(),
+  name: zod.string(),
+  sector: zod.string(),
+  marketCapCr: zod.number(),
+  peRatio: zod.number(),
+  roePercent: zod.number(),
+  rocePercent: zod.number(),
+  debtToEquity: zod.number(),
+  salesCagr3Yr: zod.number(),
+  profitCagr3Yr: zod.number(),
+  pegRatio: zod.number(),
+  promoterHoldingPercent: zod.number(),
+  freeCashFlowCr: zod.number(),
+  dividendYieldPercent: zod.number(),
+  priceToBook: zod.number(),
+  fiftyTwoWeekHigh: zod.number(),
+  currentPrice: zod.number(),
+  relativeStrengthIndex: zod.number(),
+  volumeSpikeRatio: zod.number(),
+  multibaggerScore: zod.number(),
+  tags: zod.array(zod.string()),
+});
+export const GetScreenerMultibaggerResponse = zod.array(
+  GetScreenerMultibaggerResponseItem,
+);
+
+/**
+ * @summary Get high-growth penny and micro-cap stock screening data for Indian stock exchange symbols
+ */
+export const GetScreenerPennyResponseItem = zod.object({
+  symbol: zod.string(),
+  name: zod.string(),
+  sector: zod.string(),
+  marketCapCr: zod.number(),
+  peRatio: zod.number(),
+  roePercent: zod.number(),
+  rocePercent: zod.number(),
+  debtToEquity: zod.number(),
+  salesCagr3Yr: zod.number(),
+  profitCagr3Yr: zod.number(),
+  promoterHoldingPercent: zod.number(),
+  currentPrice: zod.number(),
+  fiftyTwoWeekHigh: zod.number(),
+  turnaroundScore: zod.number(),
+  tags: zod.array(zod.string()),
+});
+export const GetScreenerPennyResponse = zod.array(GetScreenerPennyResponseItem);
+
+/**
  * @summary Get technical indicators for a symbol
  */
 export const getTechnicalAnalysisQueryIntervalDefault = `1d`;
