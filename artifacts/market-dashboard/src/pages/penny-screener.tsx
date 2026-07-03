@@ -38,25 +38,31 @@ export default function PennyScreenerPage() {
   // Filtered stocks based on search and tab logic
   const filteredStocks = useMemo(() => {
     if (!stocks) return [];
-    let list = stocks.filter((s) => 
-      s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.sector.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (activeTab === "micro") {
-      list = list.filter((s) => s.marketCapCr <= 150 || s.tags.includes("MICRO_CAP_TURNAROUND"));
-    } else if (activeTab === "sub50") {
-      list = list.filter((s) => s.currentPrice <= 50 || s.tags.includes("SUB_50_GROWTH"));
-    } else if (activeTab === "debtfree") {
-      list = list.filter((s) => s.debtToEquity <= 0.20 || s.tags.includes("DEBT_FREE"));
-    } else if (activeTab === "custom") {
+    const q = searchQuery.trim().toLowerCase();
+    
+    let list = stocks;
+    if (q) {
       list = list.filter((s) => 
-        s.marketCapCr <= maxMarketCap &&
-        s.currentPrice <= maxStockPrice &&
-        s.salesCagr3Yr >= minSalesGrowth &&
-        s.debtToEquity <= maxDebtToEquity
+        s.symbol.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        s.sector.toLowerCase().includes(q) ||
+        s.tags.some(t => t.toLowerCase().includes(q))
       );
+    } else {
+      if (activeTab === "micro") {
+        list = list.filter((s) => s.marketCapCr <= 150 || s.tags.includes("MICRO_CAP_TURNAROUND"));
+      } else if (activeTab === "sub50") {
+        list = list.filter((s) => s.currentPrice <= 50 || s.tags.includes("SUB_50_GROWTH"));
+      } else if (activeTab === "debtfree") {
+        list = list.filter((s) => s.debtToEquity <= 0.20 || s.tags.includes("DEBT_FREE"));
+      } else if (activeTab === "custom") {
+        list = list.filter((s) => 
+          s.marketCapCr <= maxMarketCap &&
+          s.currentPrice <= maxStockPrice &&
+          s.salesCagr3Yr >= minSalesGrowth &&
+          s.debtToEquity <= maxDebtToEquity
+        );
+      }
     }
 
     return list.sort((a, b) => b.turnaroundScore - a.turnaroundScore);

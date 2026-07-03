@@ -267,7 +267,7 @@ router.post("/conversations/:id/chat", async (req: any, res) => {
       modelName = "gemma-4-31b-it";
     } else if (activeProvider === "nvidia") {
       client = new OpenAI({ apiKey, baseURL: "https://integrate.api.nvidia.com/v1" });
-      modelName = process.env["NVIDIA_MODEL"] ?? "qwen/qwen3.5-122b-a10b";
+      modelName = process.env["NVIDIA_MODEL"] ?? "nvidia/nemotron-3-ultra-550b-a55b";
     } else if (activeProvider === "ollama") {
       let host = "http://localhost:11434";
       let model = "qwen2.5";
@@ -295,12 +295,16 @@ router.post("/conversations/:id/chat", async (req: any, res) => {
     const executedTools: Array<{ tool: string; args: any; result: any }> = [];
 
     // First completion call
+    // For NVIDIA NIM Nemotron reasoning model, apply extra params
+    const isNvidia = activeProvider === "nvidia";
+    const nimExtras = isNvidia ? { temperature: 1, top_p: 0.95, max_tokens: 16384, reasoning_budget: 16384, chat_template_kwargs: { enable_thinking: true } } : {};
     const completion = await client.chat.completions.create({
       model: modelName,
       messages: formattedMessages as any,
       tools: COPILOT_TOOLS,
       tool_choice: "auto",
-    });
+      ...nimExtras,
+    } as any);
 
     let assistantMessage = completion.choices[0].message;
     
@@ -366,7 +370,8 @@ router.post("/conversations/:id/chat", async (req: any, res) => {
       const finalCompletion = await client.chat.completions.create({
         model: modelName,
         messages: toolThread as any,
-      });
+        ...nimExtras,
+      } as any);
 
       assistantMessage = finalCompletion.choices[0].message;
     }

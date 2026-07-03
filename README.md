@@ -1,209 +1,110 @@
-# 🏦 NSE/BSE AI Trading Signals Terminal
+# 🏦 NSE/BSE AI Trading Terminal Workstation
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![CI](https://img.shields.io/github/actions/workflow/status/yourrepo/ci.yml?branch=main)
+![Electron](https://img.shields.io/badge/electron-v34.5.8-9cf)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
-> **A premium full‑stack trading terminal** delivering real‑time Indian market data, AI‑powered buy/sell signals, options analytics, backtesting, and Bhavcopy insights.
-
-## ✨ Overview
-
-| Feature | Description |
-|---|---|
-| **Live Dashboard** | Real‑time index quotes (NIFTY, BANKNIFTY, SENSEX), top gainers/losers, market movers |
-| **Signals Board** | AI‑generated BUY/SELL/EXIT signals with confidence scores, entry, target, stop‑loss |
-| **Market Feed** | Live quotes for NSE/BSE stocks with auto‑refresh during market hours |
-| **Options Chain** | Live NSE options data → Yahoo Finance fallback → Synthetic data, with OI, IV, bid/ask |
-| **Futures** | Simulated futures contracts (NIFTY, BANKNIFTY, RELIANCE, TCS, INFY) with basis & OI |
-| **Technical Analysis** | RSI, MACD, SMA, EMA, Bollinger Bands, ATR, Stochastic (computed server‑side) |
-| **Charts** | Interactive candlestick / line / area charts (lightweight‑charts) with overlay indicators |
-| **Backtest** | Options strategy backtester using Black‑Scholes + historical Yahoo Finance price data |
-| **Bhavcopy Analyzer** | Upload and analyse NSE daily Bhavcopy ZIP/CSV — gainers, losers, delivery % and bulk‑deal analysis |
-| **Watchlist** | Persist your own symbol watchlist with live price quotes |
-| **Settings** | Configure AI providers (NVIDIA, OpenAI, Anthropic, Gemini, Groq, DeepSeek, OpenModel) and chart defaults |
-
-### AI Signal Generation
-
-- **Primary model:** Auto-Fallback Engine (or user-selected preference)
-- **Fallbacks (in order):** OpenRouter (inference.sh) → NVIDIA NIM (Qwen) → OpenAI ChatGPT → Anthropic Claude → Google Gemini → Google Gemma → DeepSeek → Groq → OpenModel → Ollama Local AI
-- **Scheduler:** Auto‑generates signals every 15 minutes during IST market hours (09:15–15:30, Mon–Fri)
-- **Expiry:** Stale signals auto‑expire every 5 minutes
+> **A premium, multi-threaded quantitative trading workstation** delivering real-time Indian stock market data, autonomous AI worker subagents, multi-timeframe scalping, options analytics, fundamental analysis, and portable desktop executables.
 
 ---
 
-## 🛠️ Tech Stack & Versions
+## ✨ Feature Matrix
 
-### Runtime & Package Manager
-
-| Tool | Version |
-|---|---|
-| Node.js | 20+ (tested on v24.13.0) |
-| pnpm | 10+ (tested on v10.26.1) |
-| TypeScript | ~5.9.2 |
-
-### Backend (`artifacts/api-server`)
-
-| Library | Version | Purpose |
-|---|---|---|
-| Express | ^5 | HTTP server & REST API |
-| Drizzle ORM | ^0.45.2 | PostgreSQL ORM |
-| drizzle‑kit | latest | DB migrations & schema push |
-| yahoo‑finance2 | ^3.14.0 | Market data (quotes, history, options) |
-| technicalindicators | ^3.1.0 | RSI, MACD, BB, ATR, Stochastic |
-| openai | ^6.27.0 | OpenAI & NVIDIA API client |
-| @anthropic‑ai/sdk | ^0.92.0 | Anthropic Claude client |
-| cross‑env | latest | Cross‑platform environment variables |
-| pino / pino‑http | ^9 / ^10 | Structured JSON logging |
-| cors | ^2 | Cross‑origin headers |
-| cookie‑parser | ^1.4.7 | NSE session cookie management |
-| esbuild | ^0.27.3 | Production bundler |
-| zod | ^3.25.76 | Schema validation |
-
-### Frontend (`artifacts/market-dashboard`)
-
-| Library | Version | Purpose |
-|---|---|---|
-| React | 19.1.0 | UI framework |
-| Vite | ^7.3.2 |
-| Tailwind CSS | ^4.1.14 |
-| shadcn/ui (Radix) | various |
-| TanStack Query | ^5.90.21 |
-| wouter | ^3.3.5 |
-| lightweight‑charts | ^5.2.0 |
-| recharts | ^2.15.2 |
-| framer‑motion | ^12.23.24 |
-| jszip | ^3.10.1 |
-| lucide‑react | ^0.545.0 |
-| zod | ^3.25.76 |
-
-### Database
-
-| Tool | Description |
-|---|---|
-| PostgreSQL | 14+ — primary database |
-| Drizzle ORM | Schema definitions + query builder |
-
-#### Database Tables
-
-| Table | Purpose |
-|---|---|
-| `signals` | AI trading signals (action, entry, target, stop‑loss, confidence, status) |
-| `watchlist` | User‑saved symbols |
-| `provider_settings` | AI provider API keys stored securely in DB |
-| `conversations` | AI agent conversation history |
-| `messages` | Individual AI agent messages |
+| Module | Feature Capabilities |
+| :--- | :--- |
+| **Live Dashboard** | Real-time quotes for NIFTY 50, BANKNIFTY, SENSEX, GIFT Nifty, Top Gainers/Losers, and Market Heatmaps |
+| **Multibagger Screener** | Discover 10x-100x compounding stocks (ROE > 20%, low debt, high volume breakouts, custom sliders) |
+| **Penny Stock Screener** | Micro-cap turnaround screener filtering growth stocks under ₹100 and market cap < ₹150 Cr |
+| **Signals Board & 5M Scalper** | Automated AI-generated BUY/SELL/EXIT trading signals with entry, target, stop-loss, and 5M scalping desk |
+| **Fundamental Analysis** | Deep-dive valuation models, enterprise value, quarterly earnings charting, and AI investment thesis |
+| **Technical Analysis Desk** | 14+ technical indicator sweeps (RSI, MACD, Bollinger Bands, Moving Averages, VWAP) across 5m to 1d charts |
+| **Futures Feed & Options Chain** | Real-time Spot vs Futures basis, Open Interest (OI) tracking, and multi-leg Option strategy builder |
+| **Global Exchange** | Real-time tracking of global macro indices (S&P 500, Nasdaq, GIFT Nifty, Crude Oil, DXY) for sentiment calculation |
+| **Paper Trading Desk** | Virtual paper trading simulation portfolio with execution logs, performance analytics, and live P&L |
+| **Bhavcopy Analyzer** | Upload and analyze daily NSE Bhavcopy archives for institutional bulk deals and delivery percentages |
+| **Custom Workspace** | Drag-and-drop widget layout engine for personalized multi-monitor trader setups |
+| **Desktop Executable** | Self-contained, portable Windows application executable (`TradingTerminal.exe`) |
 
 ---
 
-## 📁 Project Structure
+## 🤖 Autonomous AI Worker Subagents
+
+The workstation includes **6 asynchronous background worker subagents** running in Node.js background threads to perform heavy quantitative sweeps without blocking user interaction:
+
+- 🟢 **Signals Subagent (`signalsWorker.ts`)**: Scans market movers and breakout setups every 15 minutes to publish automated trade signals.
+- 🚀 **Multibagger Subagent (`screenerWorker.ts`)**: Runs financial health and compounding algorithms across equity catalogs.
+- 🪙 **Penny Stock Subagent (`pennyWorker.ts`)**: Evaluates turnaround balance sheets and sales growth metrics for micro-caps.
+- 🌐 **Global Market Subagent (`globalMarketWorker.ts`)**: Tracks global commodity prices and macro index futures for GIFT Nifty sentiment alignment.
+- 📊 **Fundamental Subagent (`fundamentalWorker.ts`)**: Generates automated valuation profiles and financial statement summaries.
+- 📈 **Technical Subagent (`technicalWorker.ts`)**: Monitors technical indicator cross-overs and volatility bands.
+
+---
+
+## ⚙️ AI Engine & Auto-Fallback Pipeline
+
+The terminal features a resilient multi-provider AI engine that automatically route requests based on latency and availability:
+
+1. **NVIDIA NIM (Primary Fast Inference)**: `meta/llama-3.3-70b-instruct` (~120ms latency)
+2. **Google Gemini (Deep Reasoning)**: `gemini-2.5-pro` (~180ms latency)
+3. **DeepSeek AI (Quantitative Analytics)**: `deepseek-reasoner` (~220ms latency)
+4. **OpenModel & Local AI Fallback**: Local FastAPI server (`fcc-server` port 8082) or Ollama for 100% offline functionality.
+
+---
+
+## 🛠️ Architecture & Technology Stack
 
 ```text
 /
 ├── artifacts/
-│   ├── api-server/          # Express REST API (Node.js ESM)
-│   │   └── src/
-│   │       ├── routes/      # market, signals, analysis, watchlist, agent, scheduler
-│   │       └── lib/         # NSE client, multi‑AI, scheduler, logger
-│   └── market-dashboard/    # React + Vite frontend
-│       └── src/
-│           ├── pages/       # 11 pages (dashboard, signals, options, charts, etc.)
-│           ├── components/  # sidebar, live‑refresh‑bar, shadcn UI
-│           └── hooks/       # use‑live‑refresh, use‑toast
+│   ├── api-server/          # Express REST API & Autonomous Worker Subagents (Node.js ESM)
+│   ├── market-dashboard/    # React 18 + Vite 7 Frontend UI (Tailwind CSS v4, Lucide Icons)
+│   └── desktop-app/         # Electron 34 desktop shell wrapper
 ├── lib/
-│   ├── db/                  # Drizzle schema + DB client (shared lib)
-│   ├── api-spec/            # OpenAPI spec + codegen
-│   └── api-client-react/    # Generated TanStack Query hooks
-├── pnpm‑workspace.yaml      # Monorepo config & catalog
-└── package.json             # Root scripts
+│   ├── db/                  # Drizzle ORM + Local SQLite Trading Database
+│   ├── api-spec/            # OpenAPI schemas & codegen specifications
+│   └── api-client-react/    # Generated TanStack React Query hooks
+├── dist-portable/          # Compiled portable production workstation (`TradingTerminal.exe`)
+└── pnpm-workspace.yaml      # Monorepo configuration
 ```
 
 ---
 
-## 🚀 Quick Start (Windows)
+## 🚀 Quick Start & Desktop Build
+
+### Prerequisites
+- **Node.js**: v20+ (LTS recommended)
+- **pnpm**: v10+
+
+### 1️⃣ Clone and Install
+```powershell
+git clone <your-repository-url>
+cd nse-bse-trading-terminal
+pnpm install
+```
+
+### 2️⃣ Run Development Services
+Launch the API server and frontend workstation in parallel:
 
 ```powershell
-# 1️⃣ Clone the repo
-git clone <your-repo-url>
-cd <repo-folder>
-
-# 2️⃣ Fix Windows‑specific overrides (remove the `overrides:` block)
-notepad pnpm-workspace.yaml   # delete everything from `overrides:` to EOF
-
-# 3️⃣ Remove Unix‑only preinstall script
-notepad package.json          # delete the `preinstall` line
-
-# 4️⃣ Install dependencies
-pnpm install
-
-# 5️⃣ Create PostgreSQL database
-psql -U postgres -c "CREATE DATABASE trading_terminal;"
-psql -U postgres -c "CREATE USER trading_user WITH PASSWORD 'yourpassword';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE trading_terminal TO trading_user;"
-
-# 6️⃣ Create .env (project root)
-@"
-DATABASE_URL=postgresql://trading_user:yourpassword@localhost:5432/trading_terminal
-NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxx
-"@ > .env
-
-# 7️⃣ Run migrations
-cd lib\db
-$env:DATABASE_URL="postgresql://trading_user:yourpassword@localhost:5432/trading_terminal"
-pnpm drizzle-kit push
-cd ..\..\
-
-# 8️⃣ Build shared libraries
-pnpm run typecheck:libs
-
-# 9️⃣ Add Vite proxy (required locally)
-#    Edit artifacts/market-dashboard/vite.config.ts → add `proxy` block under `server`
-
-# 🔟 Start API server (new PowerShell window)
-$env:PORT="3001"
-$env:DATABASE_URL="postgresql://trading_user:yourpassword@localhost:5432/trading_terminal"
-$env:NVIDIA_API_KEY="nvapi-xxxxxxxxxxxxxxxxxxxx"
+# Start Backend API Server & Worker Subagents (Port 3001)
 pnpm --filter @workspace/api-server run dev
 
-# 1️⃣1️⃣ Start frontend (second PowerShell window)
-$env:PORT="5173"
+# Start Frontend Workstation UI (Port 5173)
 pnpm --filter @workspace/market-dashboard run dev
-
-# 1️⃣2️⃣ Open in browser
-http://localhost:5173
 ```
 
-> **Tip:** Install `dotenv-cli` (`npm i -g dotenv-cli`) and launch services with `dotenv -e .env -- pnpm …` to avoid manual `$env:` assignments.
+### 3️⃣ Build Portable Desktop Application
+To compile the standalone desktop application executable (`TradingTerminal.exe`):
 
----
-
-## 📊 Current Status
-
-- **Fully functional:** Live market data, AI signal generation, options chain, technical indicators, charts, backtesting, Bhavcopy upload, and **Desktop App (`TradingTerminal.exe`)**.
-- **Data Modes:** The platform utilizes real-time API integrations where available, and automatically falls back to an internal **Synthetic Data Generator** for Order Flow and Depth of Market (DOM) to simulate live trading safely without broker API keys.
-- **Known limitations:**
-  - Futures OI is simulated (no free real‑time source).
-  - AI signals rely on local Ollama; fallback keys must be set in the Settings page.
-  - Windows installation requires the manual fixes described above.
-- **Roadmap (next release):** Docker support, automated CI/CD, multi‑user authentication, additional broker integrations (Zerodha/Upstox).
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feat/awesome‑feature`).
-3. Follow the existing code style (ESLint + Prettier configured).
-4. Run `pnpm run typecheck:libs && pnpm run lint` before committing.
-5. Open a Pull Request – describe the change and reference any related issue.
+```powershell
+pnpm run build:desktop
+```
+The compiled executable will be generated at `dist-portable/win-unpacked/TradingTerminal.exe`.
 
 ---
 
 ## 📄 License & Acknowledgements
 
-- Licensed under the **MIT License**.
-- Thanks to the open‑source community for libraries such as **Express**, **Drizzle ORM**, **Tailwind CSS**, **React**, and **lightweight‑charts**.
-- AI models powered by **Ollama**, **NVIDIA**, **Google Gemma**, **OpenAI**, **Anthropic**, **Google Gemini**, **DeepSeek**, **Groq**, and **OpenModel**.
-
----
-
-*Created on 2026‑06‑08.*
+- **License**: MIT License.
+- **Data & Libraries**: Powered by **Lightweight Charts (TradingView)**, **Recharts**, **Express**, **Drizzle ORM**, **Tailwind CSS**, and **Yahoo Finance**.

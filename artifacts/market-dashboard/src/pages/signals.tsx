@@ -231,7 +231,6 @@ export default function SignalsBoard() {
               <SelectItem value="gemma">Google Gemma</SelectItem>
               <SelectItem value="ollama">Ollama Local AI</SelectItem>
               <SelectItem value="deepseek">DeepSeek AI</SelectItem>
-              <SelectItem value="groq">Groq Fast Inference</SelectItem>
               <SelectItem value="openmodel">OpenModel</SelectItem>
             </SelectContent>
           </Select>

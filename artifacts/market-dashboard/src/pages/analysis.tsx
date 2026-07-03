@@ -186,7 +186,6 @@ export default function AnalysisBoard() {
               <SelectItem value="gemma">Gemma</SelectItem>
               <SelectItem value="ollama">Ollama Local</SelectItem>
               <SelectItem value="deepseek">DeepSeek AI</SelectItem>
-              <SelectItem value="groq">Groq Fast</SelectItem>
             </SelectContent>
           </Select>
 

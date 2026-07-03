@@ -16,6 +16,7 @@ process.on("unhandledRejection", (reason: any) => {
   logger.error({ reason }, "Unhandled Rejection");
 });
 import { startScheduler } from "./lib/scheduler";
+import { initializeAutonomousWorkers } from "./lib/workers";
 import { initDb } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -50,6 +51,7 @@ async function startServer() {
 
     logger.info({ port }, "Server listening at http://127.0.0.1:" + port);
     startScheduler();
+    initializeAutonomousWorkers();
   });
 }
 

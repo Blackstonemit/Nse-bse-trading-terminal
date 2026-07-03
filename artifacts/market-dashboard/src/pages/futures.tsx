@@ -26,10 +26,16 @@ export default function FuturesFeed() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data: futures, isLoading } = useGetFutures(
-    debouncedSearch ? { symbol: debouncedSearch } : undefined,
-    { query: { queryKey: getGetFuturesQueryKey(debouncedSearch ? { symbol: debouncedSearch } : undefined) } }
+  const { data: rawFutures, isLoading } = useGetFutures(
+    undefined,
+    { query: { queryKey: getGetFuturesQueryKey() } }
   );
+
+  const futures = (rawFutures || []).filter((f) => {
+    if (!searchInput.trim()) return true;
+    const q = searchInput.trim().toUpperCase();
+    return f.symbol.toUpperCase().includes(q) || f.name.toUpperCase().includes(q);
+  });
 
   const { isMarketOpen, isPreOpen, lastUpdatedIST, countdown, refresh } = useLiveRefresh({
     onRefresh: () => {

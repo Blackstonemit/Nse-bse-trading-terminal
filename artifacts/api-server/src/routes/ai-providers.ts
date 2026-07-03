@@ -3,7 +3,7 @@ import { getProvidersStatus, saveProviderKey, toggleProvider, testProvider } fro
 
 const router: IRouter = Router();
 
-const DB_PROVIDERS = ["openai", "claude", "gemini", "nvidia", "ollama", "gemma", "deepseek", "groq", "openmodel"] as const;
+const DB_PROVIDERS = ["openai", "claude", "gemini", "nvidia", "ollama", "gemma", "deepseek", "openmodel"] as const;
 type DbProvider = (typeof DB_PROVIDERS)[number];
 
 function isDbProvider(p: string): p is DbProvider {

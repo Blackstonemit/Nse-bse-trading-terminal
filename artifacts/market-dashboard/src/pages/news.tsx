@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Newspaper, Loader2, ArrowUpRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { apiUrl } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,7 +17,7 @@ export default function NewsPage() {
   const { data: newsRes, isLoading } = useQuery<{ success: boolean; data: NewsItem[] }>({
     queryKey: ["/api/news"],
     queryFn: async () => {
-      const res = await fetch("/api/news");
+      const res = await fetch(apiUrl("/api/news"));
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },

@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
+import { apiUrl } from "@/lib/api";
 
 function formatNumber(num: number | null | undefined): string {
   if (num == null) return "N/A";
@@ -71,7 +72,7 @@ function SymbolSearch({ onSelect }: { onSelect: (symbol: string) => void }) {
   const { data: results, isLoading } = useQuery({
     queryKey: ["symbol-search", debouncedQuery],
     queryFn: async () => {
-      const res = await fetch(`/api/fundamentals/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const res = await fetch(apiUrl(`/api/fundamentals/search?q=${encodeURIComponent(debouncedQuery)}`));
       if (!res.ok) throw new Error("Search failed");
       return res.json();
     },
@@ -134,7 +135,7 @@ export default function FundamentalAnalysisPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["fundamentals", activeSymbol],
     queryFn: async () => {
-      const res = await fetch(`/api/fundamentals/${activeSymbol}`);
+      const res = await fetch(apiUrl(`/api/fundamentals/${activeSymbol}`));
       if (!res.ok) throw new Error("Failed to fetch fundamental data");
       return res.json();
     },
@@ -145,7 +146,7 @@ export default function FundamentalAnalysisPage() {
   const { data: newsData, isLoading: isNewsLoading } = useQuery({
     queryKey: ["fundamentals-news", activeSymbol],
     queryFn: async () => {
-      const res = await fetch(`/api/fundamentals/${activeSymbol}/news`);
+      const res = await fetch(apiUrl(`/api/fundamentals/${activeSymbol}/news`));
       if (!res.ok) throw new Error("Failed to fetch news");
       return res.json();
     },
@@ -155,7 +156,7 @@ export default function FundamentalAnalysisPage() {
 
   const analyzeMutation = useMutation({
     mutationFn: async (fundamentalData: any) => {
-      const res = await fetch("/api/fundamentals/analyze", {
+      const res = await fetch(apiUrl("/api/fundamentals/analyze"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

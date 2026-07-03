@@ -24,7 +24,7 @@ export type Settings = {
   agentSaveSignals: boolean;
   agentCustomContext: string;
   agentAutoGenerate: boolean;
-  agentProvider: "fallback" | "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "groq";
+  agentProvider: "fallback" | "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek";
 };
 
 const SETTINGS_KEY = "nse_terminal_settings";

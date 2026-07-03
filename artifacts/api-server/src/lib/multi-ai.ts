@@ -3,8 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { db, providerSettings } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "./logger";
+import { NIM_REASONING_PARAMS } from "./nvidia";
 
-export type AIProvider = "inference" | "nvidia" | "openai" | "gemini" | "claude" | "ollama" | "deepseek" | "gemma" | "groq" | "openmodel";
+export type AIProvider = "inference" | "nvidia" | "openai" | "gemini" | "claude" | "ollama" | "deepseek" | "gemma" | "openmodel";
 
 export type AIMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -16,17 +17,15 @@ export type AICompletionResult = {
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
-const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 const PROVIDER_MODELS: Record<Exclude<AIProvider, "ollama">, string> = {
   inference: "openrouter/claude-3-7-sonnet",
-  nvidia: process.env["NVIDIA_MODEL"] ?? "meta/llama-3.3-70b-instruct",
+  nvidia: process.env["NVIDIA_MODEL"] ?? "nvidia/nemotron-3-ultra-550b-a55b",
   openai: "gpt-4o",
   gemini: "gemini-2.5-pro",
   claude: "claude-3-7-sonnet-20250219",
   deepseek: "deepseek-reasoner",
   gemma: "gemma-4-31b-it",
-  groq: "llama-3.3-70b-versatile",
   openmodel: "deepseek-v4-flash",
 };
 
@@ -39,9 +38,6 @@ function makeOpenAIClient(provider: Exclude<AIProvider, "claude" | "ollama">, ap
   }
   if (provider === "deepseek") {
     return new OpenAI({ apiKey, baseURL: DEEPSEEK_BASE_URL });
-  }
-  if (provider === "groq") {
-    return new OpenAI({ apiKey, baseURL: GROQ_BASE_URL });
   }
   if (provider === "openmodel") {
     return new OpenAI({ apiKey, baseURL: "https://api.openmodel.ai/v1" });
@@ -197,11 +193,37 @@ async function callOpenModel(apiKey: string, model: string, messages: AIMessage[
   return content;
 }
 
+async function callNvidiaNim(
+  apiKey: string,
+  model: string,
+  messages: AIMessage[]
+): Promise<string> {
+  const client = new OpenAI({ apiKey, baseURL: NVIDIA_BASE_URL });
+  // Cast to any to pass NIM-specific extra params not in the OpenAI SDK types
+  const response = await (client.chat.completions.create as any)({
+    model,
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    temperature: NIM_REASONING_PARAMS.temperature,
+    top_p: NIM_REASONING_PARAMS.top_p,
+    max_tokens: NIM_REASONING_PARAMS.max_tokens,
+    reasoning_budget: NIM_REASONING_PARAMS.reasoning_budget,
+    chat_template_kwargs: NIM_REASONING_PARAMS.chat_template_kwargs,
+    stream: false,
+  });
+  const choice = response.choices?.[0];
+  // Concatenate CoT reasoning_content (thinking) with final content
+  const reasoning: string = choice?.message?.reasoning_content ?? "";
+  const final: string = choice?.message?.content?.trim() ?? "";
+  const combined = reasoning ? `${reasoning}\n\n${final}` : final;
+  if (!combined) throw new Error("Empty response from NVIDIA NIM");
+  return combined;
+}
+
 export async function callWithFallback(
   messages: AIMessage[],
   options: { maxTokens?: number; preferredProvider?: string; userId?: string } = {}
 ): Promise<AICompletionResult> {
-  const defaultOrder: AIProvider[] = ["groq", "nvidia", "openmodel", "gemini", "gemma", "openai", "claude", "deepseek", "inference", "ollama"];
+  const defaultOrder: AIProvider[] = ["nvidia", "openmodel", "gemini", "gemma", "openai", "claude", "deepseek", "inference", "ollama"];
   let order = [...defaultOrder];
 
   if (options.preferredProvider && options.preferredProvider !== "fallback") {
@@ -271,6 +293,8 @@ export async function testProvider(provider: AIProvider, userId?: string): Promi
       content = await callInferenceSh(PROVIDER_MODELS[provider], messages);
     } else if (provider === "openmodel") {
       content = await callOpenModel(apiKey, PROVIDER_MODELS[provider], messages, 50);
+    } else if (provider === "nvidia") {
+      content = await callNvidiaNim(apiKey, PROVIDER_MODELS[provider], messages);
     } else {
       const client = makeOpenAIClient(provider, apiKey);
       const model = PROVIDER_MODELS[provider];
@@ -302,7 +326,7 @@ export async function getProvidersStatus(userId: string): Promise<
   const nvidiaKey = process.env["NVIDIA_API_KEY"];
   const geminiKey = process.env["GEMINI_API_KEY"];
   const gemmaKey = process.env["GEMMA_API_KEY"] ?? process.env["GEMINI_API_KEY"];
-  const providers: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "groq", "openmodel", "ollama"];
+  const providers: AIProvider[] = ["nvidia", "openai", "claude", "gemini", "gemma", "deepseek", "openmodel", "ollama"];
 
   return providers.map((p, idx) => {
     const row = dbMap.get(p);

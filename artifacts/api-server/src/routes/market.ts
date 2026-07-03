@@ -741,9 +741,10 @@ router.get("/market/futures", async (req, res) => {
       { symbol: "INFY", yahooSym: "INFY.NS", name: "Infosys Futures" },
     ];
 
-    const filtered = query.symbol
+    const searchSym = (query.symbol || "").toUpperCase().trim();
+    const filtered = searchSym
       ? futuresSymbols.filter(
-          (f) => f.symbol === query.symbol?.toUpperCase()
+          (f) => f.symbol.includes(searchSym) || f.name.toUpperCase().includes(searchSym)
         )
       : futuresSymbols;
 
@@ -1207,6 +1208,210 @@ Respond with this exact JSON structure:
   } catch (err) {
     req.log.error({ err }, "Failed to calculate symbol sentiment");
     res.status(500).json({ error: "Failed to calculate symbol sentiment" });
+  }
+});
+
+const SECTORS_LIST = [
+  { symbol: "NIFTYAUTO", name: "Nifty Auto", yahooSymbol: "^CNXAUTO", category: "Sectoral" },
+  { symbol: "NIFTYBANK", name: "Nifty Bank", yahooSymbol: "^NSEBANK", category: "Sectoral" },
+  { symbol: "NIFTYCAPG", name: "Nifty Capital Goods", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYCEMENT", name: "Nifty Cement", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYCHEM", name: "Nifty Chemicals", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYCOMM", name: "Nifty Commercial & Transport Services", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYCONST", name: "Nifty Construction", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYCONSDUR", name: "Nifty Consumer Durables", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYCONSSERV", name: "Nifty Consumer Services", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYFIN", name: "Nifty Financial Services", yahooSymbol: "^CNXFIN", category: "Sectoral" },
+  { symbol: "NIFTYFIN2550", name: "Nifty Financial Services 25/50", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYFINEXBANK", name: "Nifty Financial Services Ex Bank", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYFMCG", name: "Nifty FMCG", yahooSymbol: "^CNXFMCG", category: "Sectoral" },
+  { symbol: "NIFTYHEALTH", name: "Nifty Healthcare", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYHOSP", name: "Nifty Hospitals", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYHOUSING", name: "Nifty Housing Finance", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYINS", name: "Nifty Insurance", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYIT", name: "Nifty IT", yahooSymbol: "^CNXIT", category: "Sectoral" },
+  { symbol: "NIFTYMEDIA", name: "Nifty Media", yahooSymbol: "^CNXMEDIA", category: "Sectoral" },
+  { symbol: "NIFTYMETAL", name: "Nifty Metal", yahooSymbol: "^CNXMETAL", category: "Sectoral" },
+  { symbol: "NIFTYNBFC", name: "Nifty NBFC", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYOILGAS", name: "Nifty Oil and Gas", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYPHARMA", name: "Nifty Pharma", yahooSymbol: "^CNXPHARMA", category: "Sectoral" },
+  { symbol: "NIFTYPOWER", name: "Nifty Power", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYPVTBANK", name: "Nifty Private Bank", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYPSUBANK", name: "Nifty PSU Bank", yahooSymbol: "^CNXPSUBANK", category: "Sectoral" },
+  { symbol: "NIFTYREALTY", name: "Nifty Realty", yahooSymbol: "^CNXREALTY", category: "Sectoral" },
+  { symbol: "NIFTYREITS", name: "Nifty REITs & Realty", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYRETAIL", name: "Nifty Retail", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYTELE", name: "Nifty Telecommunications", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTY500HEALTH", name: "Nifty500 Healthcare", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYMIDSMLFIN", name: "Nifty MidSmall Financial Services", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYMIDSMLHEALTH", name: "Nifty MidSmall Healthcare", yahooSymbol: "", category: "Sectoral" },
+  { symbol: "NIFTYMIDSMLITTELE", name: "Nifty MidSmall IT & Telecom", yahooSymbol: "", category: "Sectoral" },
+];
+
+const ALL_INDICES_METADATA = [
+  { symbol: "NIFTY50", name: "NIFTY 50", category: "Broad-Based", yahooSymbol: "^NSEI" },
+  { symbol: "NIFTYNEXT50", name: "NIFTY NEXT 50", category: "Broad-Based", yahooSymbol: "^NSMIDCP" },
+  { symbol: "NIFTYBANK", name: "NIFTY BANK", category: "Broad-Based", yahooSymbol: "^NSEBANK" },
+  { symbol: "NIFTYFIN", name: "NIFTY FINANCIAL SERVICES", category: "Broad-Based", yahooSymbol: "^CNXFIN" },
+  { symbol: "NIFTYMIDCAPSEL", name: "NIFTY MIDCAP SELECT", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTY100", name: "NIFTY 100", category: "Broad-Based", yahooSymbol: "^CNX100" },
+  { symbol: "NIFTY200", name: "NIFTY 200", category: "Broad-Based", yahooSymbol: "^CNX200" },
+  { symbol: "NIFTY500", name: "NIFTY 500", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYMID50", name: "NIFTY MIDCAP 50", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYMID100", name: "NIFTY MIDCAP 100", category: "Broad-Based", yahooSymbol: "^NSEMDCP50" },
+  { symbol: "NIFTYSM100", name: "NIFTY SMALLCAP 100", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "INDIAVIX", name: "INDIA VIX", category: "Broad-Based", yahooSymbol: "^INDIAVIX" },
+  { symbol: "NIFTYMID150", name: "NIFTY MIDCAP 150", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYSML50", name: "NIFTY SMALLCAP 50", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYSML250", name: "NIFTY SMALLCAP 250", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYMIDSML400", name: "NIFTY MIDSMALLCAP 400", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTY500MC", name: "NIFTY500 MULTICAP 50:25:25", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYLARGEMID250", name: "NIFTY LARGEMIDCAP 250", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYTOTALMARKET", name: "NIFTY TOTAL MARKET", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYMICRO250", name: "NIFTY MICROCAP 250", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTY500EQ", name: "NIFTY500 LARGEMIDSMALL EQUAL-CAP", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYFPI150", name: "NIFTY INDIA FPI 150", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYSML500", name: "NIFTY SMALLCAP 500", category: "Broad-Based", yahooSymbol: "" },
+  { symbol: "NIFTYMIDSML5050", name: "NIFTY MIDSMALLCAP400 50:50", category: "Broad-Based", yahooSymbol: "" },
+
+  { symbol: "NIFTYAUTO", name: "NIFTY AUTO", category: "Sectoral", yahooSymbol: "^CNXAUTO" },
+  { symbol: "NIFTYFIN2550", name: "NIFTY FINANCIAL SERVICES 25/50", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYFMCG", name: "NIFTY FMCG", category: "Sectoral", yahooSymbol: "^CNXFMCG" },
+  { symbol: "NIFTYIT", name: "NIFTY IT", category: "Sectoral", yahooSymbol: "^CNXIT" },
+  { symbol: "NIFTYMEDIA", name: "NIFTY MEDIA", category: "Sectoral", yahooSymbol: "^CNXMEDIA" },
+  { symbol: "NIFTYMETAL", name: "NIFTY METAL", category: "Sectoral", yahooSymbol: "^CNXMETAL" },
+  { symbol: "NIFTYPHARMA", name: "NIFTY PHARMA", category: "Sectoral", yahooSymbol: "^CNXPHARMA" },
+  { symbol: "NIFTYPSUBANK", name: "NIFTY PSU BANK", category: "Sectoral", yahooSymbol: "^CNXPSUBANK" },
+  { symbol: "NIFTYPVTBANK", name: "NIFTY PRIVATE BANK", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYREALTY", name: "NIFTY REALTY", category: "Sectoral", yahooSymbol: "^CNXREALTY" },
+  { symbol: "NIFTYHEALTHCARE", name: "NIFTY HEALTHCARE INDEX", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYCONSDUR", name: "NIFTY CONSUMER DURABLES", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYOILGAS", name: "NIFTY OIL & GAS", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYMIDSMLHEALTH", name: "NIFTY MIDSMALL HEALTHCARE", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYFINEXBANK", name: "NIFTY FINANCIAL SERVICES EX-BANK", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYMIDSMLFIN", name: "NIFTY MIDSMALL FINANCIAL SERVICES", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYMIDSMLIT", name: "NIFTY MIDSMALL IT & TELECOM", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYCHEMICALS", name: "NIFTY CHEMICALS", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTY500HEALTHCARE", name: "NIFTY500 HEALTHCARE", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYREITSREALTY", name: "NIFTY REITS & REALTY", category: "Sectoral", yahooSymbol: "" },
+  { symbol: "NIFTYCEMENT", name: "NIFTY CEMENT", category: "Sectoral", yahooSymbol: "" },
+
+  { symbol: "NIFTYCOMMODITIES", name: "NIFTY COMMODITIES", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYCONSUMPTION", name: "NIFTY INDIA CONSUMPTION", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYCPSE", name: "NIFTY CPSE", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYENERGY", name: "NIFTY ENERGY", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYINFRA", name: "NIFTY INFRASTRUCTURE", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYMNC", name: "NIFTY MNC", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYPSE", name: "NIFTY PSE", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYSERVICES", name: "NIFTY SERVICES SECTOR", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYDEFENCE", name: "NIFTY INDIA DEFENCE", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYTOURISM", name: "NIFTY INDIA TOURISM", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYCAPMARKETS", name: "NIFTY CAPITAL MARKETS", category: "Thematic", yahooSymbol: "" },
+  { symbol: "NIFTYEV", name: "NIFTY EV & NEW AGE AUTOMOTIVE", category: "Thematic", yahooSymbol: "" },
+
+  { symbol: "NIFTYALPHA50", name: "NIFTY ALPHA 50", category: "Strategy", yahooSymbol: "" },
+  { symbol: "NIFTY100QUAL30", name: "NIFTY100 QUALITY 30", category: "Strategy", yahooSymbol: "" },
+  { symbol: "NIFTY50VAL20", name: "NIFTY50 VALUE 20", category: "Strategy", yahooSymbol: "" },
+  { symbol: "NIFTY200MOM30", name: "NIFTY200 MOMENTUM 30", category: "Strategy", yahooSymbol: "" },
+
+  { symbol: "NIFTY813GSEC", name: "NIFTY 8-13 YR G-SEC", category: "Debt / Bonds", yahooSymbol: "" },
+  { symbol: "NIFTY10YGSEC", name: "NIFTY 10 YR BENCHMARK G-SEC", category: "Debt / Bonds", yahooSymbol: "" },
+  { symbol: "NIFTYCOMPGSEC", name: "NIFTY COMPOSITE G-SEC INDEX", category: "Debt / Bonds", yahooSymbol: "" },
+  { symbol: "NIFTYBOND2030", name: "NIFTY BHARAT BOND INDEX - 2030", category: "Debt / Bonds", yahooSymbol: "" },
+  { symbol: "NIFTYBOND2031", name: "NIFTY BHARAT BOND INDEX - 2031", category: "Debt / Bonds", yahooSymbol: "" },
+];
+
+async function fetchIndexQuote(symbol: string, yahooSymbol: string, name: string) {
+  let price = 0;
+  let change = 0;
+  let changePercent = 0;
+  let dataSource = "Synthetic";
+
+  if (yahooSymbol) {
+    try {
+      const q = await yahooFinance.quote(yahooSymbol);
+      if (q && (q.regularMarketPrice ?? 0) > 0) {
+        price = q.regularMarketPrice ?? 0;
+        change = q.regularMarketChange ?? 0;
+        changePercent = q.regularMarketChangePercent ?? 0;
+        dataSource = "Yahoo";
+      }
+    } catch {
+      // Handled internally, fallback used
+    }
+  }
+
+  if (price === 0) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const seedPrice = Math.abs(hash % 15000) + 1000;
+    const now = new Date();
+    const tick = Math.sin(now.getMinutes() * 60 + now.getSeconds() + seedPrice) * 1.5;
+    price = Math.round(seedPrice * (1 + tick / 100) * 100) / 100;
+    changePercent = Math.round(tick * 100) / 100;
+    change = Math.round(price * (changePercent / 100) * 100) / 100;
+  }
+
+  return {
+    symbol,
+    name,
+    value: price,
+    change,
+    changePercent,
+    high: Math.round(price * 1.01 * 100) / 100,
+    low: Math.round(price * 0.99 * 100) / 100,
+    dataSource,
+    timestamp: new Date().toISOString()
+  };
+}
+
+router.get("/market/sectors", async (req, res) => {
+  try {
+    const cacheKey = "market_sectors_all";
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    const results = await Promise.all(
+      SECTORS_LIST.map((s) => fetchIndexQuote(s.symbol, s.yahooSymbol, s.name))
+    );
+
+    globalCache.set(cacheKey, results, 10000); // 10 seconds cache
+    res.json(results);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch market sectors");
+    res.status(500).json({ error: "Failed to fetch market sectors" });
+  }
+});
+
+router.get("/market/all-indices", async (req, res) => {
+  try {
+    const cacheKey = "market_all_indices";
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    const results = await Promise.all(
+      ALL_INDICES_METADATA.map(async (idx) => {
+        const quote = await fetchIndexQuote(idx.symbol, idx.yahooSymbol, idx.name);
+        return {
+          ...quote,
+          category: idx.category
+        };
+      })
+    );
+
+    globalCache.set(cacheKey, results, 10000); // 10 seconds cache
+    res.json(results);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch all indices");
+    res.status(500).json({ error: "Failed to fetch all indices" });
   }
 });
 

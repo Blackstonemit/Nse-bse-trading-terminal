@@ -9,9 +9,10 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { Settings2, RefreshCw, BarChart2, Eye, Save, RotateCcw, BrainCircuit, Sliders, Layers, CheckCircle2, XCircle, ExternalLink, Eye as EyeIcon, EyeOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
 
 type ProviderStatus = {
-  provider: "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "groq" | "openmodel";
+  provider: "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek" | "openmodel";
   configured: boolean;
   enabled: boolean;
   isDefault: boolean;
@@ -22,9 +23,9 @@ const PROVIDER_META: Record<string, { label: string; color: string; keyUrl: stri
   nvidia: {
     label: "NVIDIA NIM",
     color: "text-green-400",
-    keyUrl: "https://build.nvidia.com/explore/discover",
+    keyUrl: "https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b",
     keyHint: "nvapi-...",
-    model: "Llama 3.3 70B",
+    model: "Nemotron-3 Ultra 550B",
   },
   openai: {
     label: "ChatGPT",
@@ -68,13 +69,6 @@ const PROVIDER_META: Record<string, { label: string; color: string; keyUrl: stri
     keyHint: "sk-...",
     model: "DeepSeek-Reasoner",
   },
-  groq: {
-    label: "Groq Fast Inference",
-    color: "text-red-500",
-    keyUrl: "https://console.groq.com/keys",
-    keyHint: "gsk_...",
-    model: "Llama 3.3 70B",
-  },
   openmodel: {
     label: "OpenModel",
     color: "text-indigo-400",
@@ -99,7 +93,7 @@ function AIProvidersCard() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("/api/ai-providers/status");
+      const res = await fetch(apiUrl("/api/ai-providers/status"));
       const data = await res.json() as ProviderStatus[];
       setProviders(data);
 
@@ -132,7 +126,7 @@ function AIProvidersCard() {
     }
     setSaving((p) => ({ ...p, [provider]: true }));
     try {
-      const res = await fetch(`/api/ai-providers/${provider}/key`, {
+      const res = await fetch(apiUrl(`/api/ai-providers/${provider}/key`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: key }),
@@ -156,7 +150,7 @@ function AIProvidersCard() {
   const handleTestProvider = async (provider: string) => {
     setTesting((p) => ({ ...p, [provider]: true }));
     try {
-      const res = await fetch(`/api/ai-providers/${provider}/test`, {
+      const res = await fetch(apiUrl(`/api/ai-providers/${provider}/test`), {
         method: "POST",
       });
       const data = await res.json();
@@ -650,7 +644,6 @@ export default function SettingsDashboard() {
                     <SelectItem value="gemma">Google Gemma</SelectItem>
                     <SelectItem value="ollama">Ollama Local AI</SelectItem>
                     <SelectItem value="deepseek">DeepSeek AI</SelectItem>
-                    <SelectItem value="groq">Groq Fast Inference</SelectItem>
                     <SelectItem value="openmodel">OpenModel</SelectItem>
                   </SelectContent>
                 </Select>

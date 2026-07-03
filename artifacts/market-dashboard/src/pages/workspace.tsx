@@ -49,10 +49,16 @@ export default function WorkspacePage() {
 
   const handleDrop = (e: React.DragEvent, targetSlotIdx: number) => {
     e.preventDefault();
-    const sourceSlotIdx = Number(e.dataTransfer.getData("text/plain"));
-    if (sourceSlotIdx === targetSlotIdx) return;
+    const sourceSlotIdxStr = e.dataTransfer.getData("text/plain");
+    if (!sourceSlotIdxStr && sourceSlotIdxStr !== "0") return;
+    const sourceSlotIdx = Number(sourceSlotIdxStr);
+    if (isNaN(sourceSlotIdx) || sourceSlotIdx === targetSlotIdx) return;
+
+    const sourceWidget = layout[sourceSlotIdx];
+    const targetWidget = layout[targetSlotIdx];
 
     setLayout((prev) => {
+      if (sourceSlotIdx < 0 || sourceSlotIdx >= prev.length || targetSlotIdx < 0 || targetSlotIdx >= prev.length) return prev;
       const next = [...prev];
       const temp = next[sourceSlotIdx];
       next[sourceSlotIdx] = next[targetSlotIdx];
@@ -60,9 +66,12 @@ export default function WorkspacePage() {
       return next;
     });
     setDraggedSlot(null);
+
+    const sourceTitle = WIDGET_META[sourceWidget]?.title || "Widget";
+    const targetTitle = WIDGET_META[targetWidget]?.title || "Widget";
     toast({
       title: "Workspace Customised",
-      description: `Swapped ${WIDGET_META[layout[sourceSlotIdx]].title} with ${WIDGET_META[layout[targetSlotIdx]].title}.`,
+      description: `Swapped ${sourceTitle} with ${targetTitle}.`,
     });
   };
 
@@ -181,7 +190,7 @@ interface WidgetCardProps {
 }
 
 function WorkspaceWidgetCard({ type, slotIdx, symbol, onDragStart, onChangeWidget, onSetSymbol }: WidgetCardProps) {
-  const Meta = WIDGET_META[type];
+  const Meta = WIDGET_META[type] || { title: "Widget", icon: LineChart, color: "text-primary" };
   const Icon = Meta.icon;
 
   return (

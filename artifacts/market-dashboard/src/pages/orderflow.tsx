@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layers, Box, Loader2, ArrowRightLeft, TrendingDown, TrendingUp, AlertTriangle } from "lucide-react";
+import { apiUrl } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ export default function OrderFlowPage() {
   const { data: depthRes, isLoading: depthLoading } = useQuery<{ data: { bids: MarketDepth[], asks: MarketDepth[] } }>({
     queryKey: ["/api/orderflow/depth", symbol],
     queryFn: async () => {
-      const res = await fetch(`/api/orderflow/depth/${symbol}`);
+      const res = await fetch(apiUrl(`/api/orderflow/depth/${symbol}`));
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
@@ -36,7 +37,7 @@ export default function OrderFlowPage() {
   const { data: blocksRes, isLoading: blocksLoading } = useQuery<{ data: BlockTrade[] }>({
     queryKey: ["/api/orderflow/blocks", symbol],
     queryFn: async () => {
-      const res = await fetch(`/api/orderflow/blocks/${symbol}`);
+      const res = await fetch(apiUrl(`/api/orderflow/blocks/${symbol}`));
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },

@@ -31,6 +31,8 @@ const OrderFlowPage = lazy(() => import("@/pages/orderflow"));
 const ScreenerPage = lazy(() => import("@/pages/screener"));
 const PennyScreenerPage = lazy(() => import("@/pages/penny-screener"));
 const LoginPage = lazy(() => import("@/pages/login"));
+const NiftySectorsPage = lazy(() => import("@/pages/sectors"));
+const NiftyIndicesPage = lazy(() => import("@/pages/indices"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient({
@@ -113,6 +115,8 @@ function Router() {
           <Route path="/orderflow" component={OrderFlowPage} />
           <Route path="/screener" component={ScreenerPage} />
           <Route path="/penny-screener" component={PennyScreenerPage} />
+          <Route path="/sectors" component={NiftySectorsPage} />
+          <Route path="/indices" component={NiftyIndicesPage} />
           <Route path="/settings" component={SettingsDashboard} />
           <Route component={NotFound} />
         </Switch>

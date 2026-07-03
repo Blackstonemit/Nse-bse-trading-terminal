@@ -37,25 +37,31 @@ export default function MultibaggerScreenerPage() {
   // Filtered stocks based on search and tab logic
   const filteredStocks = useMemo(() => {
     if (!stocks) return [];
-    let list = stocks.filter((s) => 
-      s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.sector.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (activeTab === "core") {
-      list = list.filter((s) => s.tags.includes("CORE_MULTIBAGGER") || s.multibaggerScore >= 88);
-    } else if (activeTab === "value") {
-      list = list.filter((s) => s.tags.includes("VALUATION_PLAY") || s.peRatio <= 50 || s.priceToBook <= 12);
-    } else if (activeTab === "momentum") {
-      list = list.filter((s) => s.tags.includes("MOMENTUM_BREAKOUT") || s.relativeStrengthIndex >= 65 || s.volumeSpikeRatio >= 2.0);
-    } else if (activeTab === "custom") {
+    const q = searchQuery.trim().toLowerCase();
+    
+    let list = stocks;
+    if (q) {
       list = list.filter((s) => 
-        s.marketCapCr >= minMarketCap &&
-        s.peRatio <= maxPe &&
-        s.roePercent >= minRoe &&
-        s.debtToEquity <= maxDebtToEquity
+        s.symbol.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        s.sector.toLowerCase().includes(q) ||
+        s.tags.some(t => t.toLowerCase().includes(q))
       );
+    } else {
+      if (activeTab === "core") {
+        list = list.filter((s) => s.tags.includes("CORE_MULTIBAGGER") || s.multibaggerScore >= 88);
+      } else if (activeTab === "value") {
+        list = list.filter((s) => s.tags.includes("VALUATION_PLAY") || s.peRatio <= 50 || s.priceToBook <= 12);
+      } else if (activeTab === "momentum") {
+        list = list.filter((s) => s.tags.includes("MOMENTUM_BREAKOUT") || s.relativeStrengthIndex >= 65 || s.volumeSpikeRatio >= 2.0);
+      } else if (activeTab === "custom") {
+        list = list.filter((s) => 
+          s.marketCapCr >= minMarketCap &&
+          s.peRatio <= maxPe &&
+          s.roePercent >= minRoe &&
+          s.debtToEquity <= maxDebtToEquity
+        );
+      }
     }
 
     return list.sort((a, b) => b.multibaggerScore - a.multibaggerScore);
