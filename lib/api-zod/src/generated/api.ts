@@ -26,6 +26,10 @@ export const GetMarketQuotesQueryParams = zod.object({
   exchange: zod
     .enum(["NSE", "BSE"])
     .default(getMarketQuotesQueryExchangeDefault),
+  source: zod
+    .enum(["yahoo", "google"])
+    .optional()
+    .default("yahoo"),
 });
 
 export const GetMarketQuotesResponseItem = zod.object({

@@ -5,7 +5,7 @@ export class MemoryCache {
     const item = this.cache.get(key);
     if (!item) return null;
 
-    if (Date.now() > item.expiry) {
+    if (item.expiry > 0 && Date.now() > item.expiry) {
       this.cache.delete(key);
       return null;
     }
@@ -16,7 +16,7 @@ export class MemoryCache {
   set(key: string, data: any, ttlMs: number): void {
     this.cache.set(key, {
       data,
-      expiry: Date.now() + ttlMs,
+      expiry: ttlMs <= 0 ? 0 : Date.now() + ttlMs,
     });
   }
 

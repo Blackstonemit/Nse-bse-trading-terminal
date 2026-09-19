@@ -42,7 +42,8 @@ export default function NiftySectorsPage() {
       if (!res.ok) throw new Error("Failed to fetch sector data");
       return res.json();
     },
-    refetchInterval: 10000 // refresh every 10s
+    refetchInterval: 4000,
+    staleTime: 2000,
   });
 
   const processedSectors = useMemo(() => {

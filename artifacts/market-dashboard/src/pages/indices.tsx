@@ -46,7 +46,8 @@ export default function NiftyIndicesPage() {
       if (!res.ok) throw new Error("Failed to fetch all indices");
       return res.json();
     },
-    refetchInterval: 10000 // refresh every 10s
+    refetchInterval: 3000,
+    staleTime: 1500,
   });
 
   const processedIndices = useMemo(() => {

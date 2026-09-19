@@ -16,6 +16,11 @@ import fundamentalsRouter from "./fundamentals";
 import newsRouter from "./news";
 import orderflowRouter from "./orderflow";
 import screenerRouter from "./screener";
+import convictionPicksRouter from "./conviction-picks";
+import volumeShockersRouter from "./volume-shockers";
+import ipoRouter from "./ipo";
+import commoditiesRouter from "./commodities";
+import mutualFundsRouter from "./mutual-funds";
 
 const router: IRouter = Router();
 
@@ -35,8 +40,14 @@ router.use(paperTradingRouter);
 router.use(copilotRouter);
 router.use(bhavcopyRouter);
 router.use(fundamentalsRouter);
+router.use(convictionPicksRouter);
+router.use(volumeShockersRouter);
+router.use(ipoRouter);
+router.use(commoditiesRouter);
+router.use(mutualFundsRouter);
 router.use("/news", newsRouter);
 router.use("/orderflow", orderflowRouter);
 router.use("/screener", screenerRouter);
 
 export default router;
+

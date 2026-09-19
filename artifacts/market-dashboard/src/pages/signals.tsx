@@ -207,7 +207,7 @@ export default function SignalsBoard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold tracking-tight font-mono">SIGNALS BOARD</h1>
+        <h1 className="text-2xl font-bold tracking-tight font-mono pl-5 live-pulse">SIGNALS BOARD</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <LiveRefreshBar
             isMarketOpen={isMarketOpen}
@@ -292,16 +292,17 @@ export default function SignalsBoard() {
       <div className="grid grid-cols-1 gap-4">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i} className="rounded-sm border-muted">
-              <CardContent className="p-6 space-y-4">
-                <Skeleton className="h-6 w-1/3" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
+            <Card key={i} className="rounded-sm border-muted glass p-6 shimmer h-24">
             </Card>
           ))
         ) : signals && signals.length > 0 ? (
           signals.map(signal => (
-            <Card key={signal.id} className="rounded-sm border-muted bg-card hover:border-primary/50 transition-colors">
+            <Card key={signal.id} className={cn(
+              "rounded-sm border-muted glass hover-glow transition-all duration-200",
+              signal.action === "BUY" ? "border-glow-success" : 
+              signal.action === "SELL" ? "border-glow-destructive" : 
+              "border-glow-primary"
+            )}>
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="space-y-2">

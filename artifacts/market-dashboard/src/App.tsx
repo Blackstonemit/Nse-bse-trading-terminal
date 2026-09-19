@@ -33,16 +33,23 @@ const PennyScreenerPage = lazy(() => import("@/pages/penny-screener"));
 const LoginPage = lazy(() => import("@/pages/login"));
 const NiftySectorsPage = lazy(() => import("@/pages/sectors"));
 const NiftyIndicesPage = lazy(() => import("@/pages/indices"));
+const ConvictionPicks = lazy(() => import("@/pages/conviction-picks"));
+const OiTracker = lazy(() => import("@/pages/oi-tracker"));
+const VolumeShockers = lazy(() => import("@/pages/volume-shockers"));
+const IpoWatch = lazy(() => import("@/pages/ipo-watch"));
+const Commodities = lazy(() => import("@/pages/commodities"));
+const AiAssistant = lazy(() => import("@/pages/ai-assistant"));
+const MutualFunds = lazy(() => import("@/pages/mutual-funds"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       retry: 1,
-      staleTime: 60000, // 1 minute
-      gcTime: 600000, // 10 minutes cache retention
+      staleTime: 2000, // 2 seconds for active real-time data streaming
+      gcTime: 300000, // 5 minutes cache retention
     },
   },
 });
@@ -117,6 +124,13 @@ function Router() {
           <Route path="/penny-screener" component={PennyScreenerPage} />
           <Route path="/sectors" component={NiftySectorsPage} />
           <Route path="/indices" component={NiftyIndicesPage} />
+          <Route path="/conviction-picks" component={ConvictionPicks} />
+          <Route path="/oi-tracker" component={OiTracker} />
+          <Route path="/volume-shockers" component={VolumeShockers} />
+          <Route path="/ipo" component={IpoWatch} />
+          <Route path="/commodities" component={Commodities} />
+          <Route path="/ai-assistant" component={AiAssistant} />
+          <Route path="/mutual-funds" component={MutualFunds} />
           <Route path="/settings" component={SettingsDashboard} />
           <Route component={NotFound} />
         </Switch>

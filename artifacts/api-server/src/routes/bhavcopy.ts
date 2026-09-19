@@ -2,7 +2,19 @@ import { Router, type IRouter } from "express";
 import { db, bhavcopyRecords } from "@workspace/db";
 import { eq, desc, inArray, sql } from "drizzle-orm";
 
+import { syncLatestBhavcopy } from "../lib/bhavcopy-sync.js";
+
 const router: IRouter = Router();
+
+router.post("/bhavcopy/sync", async (req: any, res) => {
+  try {
+    const result = await syncLatestBhavcopy(3);
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to auto-sync Bhavcopy");
+    res.status(500).json({ error: "Failed to sync Bhavcopy" });
+  }
+});
 
 router.post("/bhavcopy/upload", async (req: any, res) => {
   try {
@@ -49,12 +61,23 @@ router.post("/bhavcopy/upload", async (req: any, res) => {
 router.get("/bhavcopy/screener", async (req: any, res) => {
   try {
     // Get last 5 uploaded dates
-    const datesResult = await db
+    let datesResult = await db
       .select({ date: bhavcopyRecords.date })
       .from(bhavcopyRecords)
       .groupBy(bhavcopyRecords.date)
       .orderBy(desc(bhavcopyRecords.date))
       .limit(5);
+
+    // If no records in database, auto-trigger a quick sync
+    if (datesResult.length === 0) {
+      await syncLatestBhavcopy(2);
+      datesResult = await db
+        .select({ date: bhavcopyRecords.date })
+        .from(bhavcopyRecords)
+        .groupBy(bhavcopyRecords.date)
+        .orderBy(desc(bhavcopyRecords.date))
+        .limit(5);
+    }
 
     if (datesResult.length === 0) {
       res.json({

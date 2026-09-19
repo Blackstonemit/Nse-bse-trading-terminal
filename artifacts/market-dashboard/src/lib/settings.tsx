@@ -13,6 +13,8 @@ export type Settings = {
   showSyntheticData: boolean;
   highlightATM: boolean;
   theme: "light" | "dark" | "system";
+  themeAccent: "blue" | "emerald" | "amber" | "violet";
+  dataSource: "yahoo" | "google";
   // ── AI Agent settings ───────────────────────────────────────────────────────
   agentInstrumentType: "STOCK" | "INDEX" | "OPTIONS" | "FUTURES";
   agentTimeframe: "INTRADAY" | "SWING" | "POSITIONAL";
@@ -25,6 +27,9 @@ export type Settings = {
   agentCustomContext: string;
   agentAutoGenerate: boolean;
   agentProvider: "fallback" | "nvidia" | "openai" | "claude" | "gemini" | "ollama" | "gemma" | "deepseek";
+  // ── Screener.in settings ───────────────────────────────────────────────────
+  screenerUsername: string;
+  screenerPassword: string;
 };
 
 const SETTINGS_KEY = "nse_terminal_settings";
@@ -32,7 +37,7 @@ const SETTINGS_KEY = "nse_terminal_settings";
 export const DEFAULT_SETTINGS: Settings = {
   defaultSymbol: "NIFTY",
   defaultExchange: "NSE",
-  refreshInterval: 30000,
+  refreshInterval: 3000,
   autoRefresh: true,
   lotSize: 75,
   riskFreeRate: 6.5,
@@ -42,6 +47,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showSyntheticData: true,
   highlightATM: true,
   theme: "dark",
+  themeAccent: "blue",
+  dataSource: "google",
   agentInstrumentType: "STOCK",
   agentTimeframe: "SWING",
   agentStyle: "moderate",
@@ -53,12 +60,21 @@ export const DEFAULT_SETTINGS: Settings = {
   agentCustomContext: "",
   agentAutoGenerate: false,
   agentProvider: "fallback",
+  screenerUsername: "",
+  screenerPassword: "",
 };
 
 export function loadSettings(): Settings {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Upgrade legacy sluggish interval (30s) to 3s for fast streaming
+      if (parsed.refreshInterval && parsed.refreshInterval > 5000) {
+        parsed.refreshInterval = 3000;
+      }
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    }
   } catch {}
   return { ...DEFAULT_SETTINGS };
 }

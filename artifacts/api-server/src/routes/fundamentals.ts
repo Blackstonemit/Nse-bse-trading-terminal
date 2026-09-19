@@ -46,19 +46,50 @@ const POPULAR_SYMBOLS = [
   { symbol: "LT", name: "Larsen & Toubro Ltd.", shortname: "L&T", longname: "Larsen & Toubro Ltd.", sector: "Engineering", exchDisp: "NSE" }
 ];
 
-router.get("/fundamentals/search", (req, res) => {
+router.get("/fundamentals/search", async (req, res) => {
   try {
-    const q = (req.query.q as string || "").trim().toUpperCase();
-    if (!q) {
+    const rawQuery = (req.query.q as string || "").trim();
+    if (!rawQuery) {
       res.json(POPULAR_SYMBOLS.slice(0, 5));
       return;
     }
-    const filtered = POPULAR_SYMBOLS.filter(
-      (s) => s.symbol.includes(q) || s.name.toUpperCase().includes(q) || s.sector.toUpperCase().includes(q)
-    );
-    res.json(filtered.length > 0 ? filtered : [{ symbol: q, name: `${q} Stock`, shortname: q, longname: `${q} Ltd.`, sector: "NSE Equity", exchDisp: "NSE" }]);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to perform symbol search" });
+
+    const cacheKey = `fund_search_${rawQuery.toLowerCase()}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    let quotes: any[] = [];
+    try {
+      const result = await yahooFinance.search(rawQuery, { quotesCount: 8, newsCount: 0 });
+      quotes = result.quotes || [];
+    } catch (err: any) {
+      if (err.name === 'FailedYahooValidationError' && err.result && err.result.quotes) {
+        quotes = err.result.quotes;
+      } else {
+        req.log.warn({ err, rawQuery }, "Yahoo search failed, using popular symbols fallback");
+      }
+    }
+
+    let filtered = quotes.filter((q) => q.quoteType === "EQUITY" || q.quoteType === "INDEX" || q.quoteType === "ETF");
+
+    if (filtered.length === 0) {
+      const upper = rawQuery.toUpperCase();
+      const localMatches = POPULAR_SYMBOLS.filter(
+        (s) => s.symbol.includes(upper) || s.name.toUpperCase().includes(upper) || s.sector.toUpperCase().includes(upper)
+      );
+      filtered = localMatches.length > 0 ? localMatches : [
+        { symbol: upper, name: `${upper} Equity`, shortname: upper, longname: `${upper} Ltd.`, sector: "NSE Equity", exchDisp: "NSE" }
+      ];
+    }
+
+    globalCache.set(cacheKey, filtered, 300000); // 5 minutes
+    res.json(filtered);
+  } catch (err) {
+    req.log.error({ err, query: req.query.q }, "Failed to fetch search data");
+    res.status(500).json({ error: "Failed to fetch search data" });
   }
 });
 
@@ -242,44 +273,6 @@ router.get("/fundamentals/:symbol/news", async (req, res) => {
   }
 });
 
-router.get("/fundamentals/search", async (req, res) => {
-  try {
-    const query = req.query.q as string;
-    if (!query || typeof query !== "string") {
-      res.status(400).json({ error: "Invalid query parameter" });
-      return;
-    }
-
-    const cacheKey = `fund_search_${query.toLowerCase()}`;
-    const cached = globalCache.get(cacheKey);
-    if (cached) {
-      res.json(cached);
-      return;
-    }
-
-    let quotes: any[] = [];
-    try {
-      const result = await yahooFinance.search(query, { quotesCount: 8, newsCount: 0 });
-      quotes = result.quotes || [];
-    } catch (err: any) {
-      // Handle Yahoo schema validation errors 
-      if (err.name === 'FailedYahooValidationError' && err.result && err.result.quotes) {
-        quotes = err.result.quotes;
-      } else {
-        throw err;
-      }
-    }
-
-    // Filter to only EQUITY or INDEX
-    const filtered = quotes.filter((q) => q.quoteType === "EQUITY" || q.quoteType === "INDEX" || q.quoteType === "ETF");
-
-    globalCache.set(cacheKey, filtered, 300000); // 5 minutes
-    res.json(filtered);
-  } catch (err) {
-    req.log.error({ err, query: req.query.q }, "Failed to fetch search data");
-    res.status(500).json({ error: "Failed to fetch search data" });
-  }
-});
 
 import { callWithFallback } from "../lib/multi-ai";
 

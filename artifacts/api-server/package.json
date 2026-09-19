@@ -13,7 +13,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "pkg": "pkg . --target node18-win-x64 --output ../../TradingTerminal.exe",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --fileParallelism=false"
   },
   "pkg": {
     "scripts": [
@@ -29,7 +29,6 @@
     "@libsql/client": "^0.14.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
-    "@workspace/integrations-openai-ai-server": "workspace:*",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
@@ -40,7 +39,7 @@
     "pino": "^9",
     "pino-http": "^10",
     "technicalindicators": "^3.1.0",
-    "yahoo-finance2": "^3.14.0"
+    "yahoo-finance2": "catalog:"
   },
   "devDependencies": {
     "@types/compression": "^1.8.1",

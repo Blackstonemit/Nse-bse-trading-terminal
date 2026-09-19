@@ -1,13 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  Activity, 
-  LineChart, 
-  BarChart2, 
+import {
+  Activity,
+  LineChart,
+  BarChart2,
   BarChart4,
   Compass,
-  Layers, 
-  TrendingUp, 
+  Layers,
+  TrendingUp,
   List,
   TerminalSquare,
   FlaskConical,
@@ -23,106 +23,173 @@ import {
   LayoutGrid,
   BookOpen,
   Rocket,
-  Coins
+  Coins,
+  Target,
+  Flame,
+  PieChart,
+  Bot,
+  DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/", label: "Live Dashboard", icon: Activity },
-  { href: "/workspace", label: "Custom Workspace", icon: LayoutGrid },
-  { href: "/screener", label: "Multibagger Screener", icon: Rocket },
-  { href: "/penny-screener", label: "Penny Stock Screener", icon: Coins },
-  { href: "/sectors", label: "Nifty Sectors", icon: Compass },
-  { href: "/indices", label: "Nifty Indices", icon: BarChart4 },
-  { href: "/signals", label: "Signals Board", icon: TerminalSquare },
-  { href: "/scalping", label: "5M Scalper", icon: Zap },
-  { href: "/paper-trading", label: "Paper Trader", icon: Wallet },
-  { href: "/global-markets", label: "Global Exchange", icon: Globe },
-  { href: "/market", label: "Market Feed", icon: LineChart },
-  { href: "/orderflow", label: "Order Flow", icon: Layers },
-  { href: "/options", label: "Options Chain", icon: Layers },
-  { href: "/options-strategy", label: "Strategy Builder", icon: Workflow },
-  { href: "/futures", label: "Futures", icon: BarChart2 },
-  { href: "/analysis", label: "Technical Analysis", icon: TrendingUp },
-  { href: "/fundamentals", label: "Fundamentals", icon: BookOpen },
-  { href: "/news", label: "Market News", icon: BookOpen },
-  { href: "/charts", label: "Charts", icon: CandlestickChart },
-  { href: "/backtest", label: "Backtest", icon: FlaskConical },
-  { href: "/bhavcopy", label: "Bhavcopy", icon: PackageOpen },
-  { href: "/watchlist", label: "Watchlist", icon: List },
-  { href: "/settings", label: "Settings", icon: Settings2 },
+interface SidebarProps {
+  isOpen?: boolean;
+}
+
+interface NavGroup {
+  title: string;
+  items: {
+    href: string;
+    label: string;
+    icon: any;
+    badge?: string;
+    badgeColor?: string;
+  }[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    title: "MARKETS & DISCOVERY",
+    items: [
+      { href: "/", label: "Live Dashboard", icon: Activity },
+      { href: "/conviction-picks", label: "Conviction Picks", icon: Target, badge: "NEW", badgeColor: "bg-blue-600/80 text-white" },
+      { href: "/volume-shockers", label: "Volume Shockers", icon: Flame, badge: "HOT", badgeColor: "bg-amber-600/80 text-white" },
+      { href: "/market", label: "Market Feed", icon: LineChart },
+      { href: "/sectors", label: "Nifty Sectors", icon: Compass },
+      { href: "/indices", label: "Nifty Indices", icon: BarChart4 },
+      { href: "/global-markets", label: "Global Exchange", icon: Globe },
+      { href: "/ipo", label: "IPO Watch & GMP", icon: Rocket, badge: "NEW", badgeColor: "bg-emerald-600/80 text-white" },
+    ],
+  },
+  {
+    title: "DERIVATIVES & F&O",
+    items: [
+      { href: "/oi-tracker", label: "Live OI Tracker", icon: Layers, badge: "PRO", badgeColor: "bg-indigo-600/80 text-white" },
+      { href: "/options", label: "Options Chain", icon: Layers },
+      { href: "/options-strategy", label: "Strategy Builder", icon: Workflow },
+      { href: "/futures", label: "Futures Feed", icon: BarChart2 },
+      { href: "/orderflow", label: "Order Flow", icon: Layers },
+    ],
+  },
+  {
+    title: "AI TRADING & SCREENERS",
+    items: [
+      { href: "/ai-assistant", label: "AI Trading Copilot", icon: Bot, badge: "AI", badgeColor: "bg-cyan-600/80 text-white" },
+      { href: "/signals", label: "Signals Board", icon: TerminalSquare },
+      { href: "/screener", label: "Multibagger Screener", icon: Rocket },
+      { href: "/penny-screener", label: "Penny Screener", icon: Coins },
+    ],
+  },
+  {
+    title: "COMMODITIES & FUNDS",
+    items: [
+      { href: "/commodities", label: "Gold & Silver Desk", icon: DollarSign, badge: "LIVE", badgeColor: "bg-amber-500 text-black font-bold" },
+      { href: "/mutual-funds", label: "Mutual Funds", icon: PieChart, badge: "NEW", badgeColor: "bg-emerald-600/80 text-white" },
+    ],
+  },
+  {
+    title: "EXECUTION & TOOLS",
+    items: [
+      { href: "/scalping", label: "5M Scalper", icon: Zap },
+      { href: "/workspace", label: "Custom Workspace", icon: LayoutGrid },
+      { href: "/paper-trading", label: "Paper Trader", icon: Wallet },
+      { href: "/charts", label: "Charts", icon: CandlestickChart },
+      { href: "/analysis", label: "Technical Analysis", icon: TrendingUp },
+      { href: "/fundamentals", label: "Fundamentals", icon: BookOpen },
+      { href: "/backtest", label: "Backtest", icon: FlaskConical },
+      { href: "/bhavcopy", label: "Bhavcopy", icon: PackageOpen },
+      { href: "/news", label: "Market News", icon: BookOpen },
+      { href: "/watchlist", label: "Watchlist", icon: List },
+      { href: "/settings", label: "Settings", icon: Settings2 },
+    ],
+  },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isOpen = true }: SidebarProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
   return (
-    <div className="w-64 bg-sidebar border-r border-sidebar-border h-screen flex flex-col fixed top-0 left-0 z-20">
-      <div className="h-14 flex items-center px-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2 text-primary font-bold text-lg font-mono">
-          <TerminalSquare className="h-5 w-5" />
-          <span>TERMINAL</span>
-        </div>
+    <aside
+      className={cn(
+        "w-60 bg-sidebar/95 backdrop-blur-md border-r border-sidebar-border h-[calc(100vh-5rem)] flex flex-col fixed top-20 left-0 z-20 transition-transform duration-300 ease-in-out",
+        !isOpen && "-translate-x-full"
+      )}
+    >
+      <div className="flex-1 overflow-y-auto py-3 px-2 no-scrollbar space-y-4">
+        {navGroups.map((group) => (
+          <div key={group.title} className="space-y-1">
+            <div className="px-2.5 text-[10px] font-mono tracking-wider font-semibold text-slate-500 uppercase">
+              {group.title}
+            </div>
+            <nav className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive = location === item.href;
+                return (
+                  <Link key={item.href} href={item.href} className="block group">
+                    <div
+                      className={cn(
+                        "flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150",
+                        isActive
+                          ? "bg-blue-600/15 text-blue-400 font-semibold border border-blue-500/30"
+                          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        <item.icon
+                          className={cn(
+                            "h-3.5 w-3.5 shrink-0 transition-transform duration-150",
+                            isActive ? "text-blue-400 scale-110" : "group-hover:scale-110"
+                          )}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={cn("text-[8.5px] font-bold px-1.5 py-0.2 rounded shrink-0", item.badgeColor)}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        ))}
       </div>
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = location === item.href;
-            return (
-              <Link key={item.href} href={item.href} className="block group">
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-sm transition-all duration-200",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <item.icon className={cn(
-                    "h-4 w-4 transition-transform duration-200",
-                    isActive ? "scale-110" : "group-hover:scale-110"
-                  )} />
-                  <span className={cn(
-                    "transition-transform duration-200",
-                    !isActive && "group-hover:translate-x-1"
-                  )}>
-                    {item.label}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-      <div className="p-4 border-t border-sidebar-border space-y-3 font-mono">
-        {user && (
-          <div className="flex items-center gap-3 bg-sidebar-accent/20 p-2 rounded-sm border border-sidebar-border/30">
+
+      {user && (
+        <div className="p-3 border-t border-sidebar-border font-mono bg-slate-950/40">
+          <div className="flex items-center gap-2.5 bg-sidebar-accent/20 p-2 rounded border border-sidebar-border/30">
             {user.picture ? (
-              <img src={user.picture} alt={user.name} className="w-7 h-7 rounded-full border border-primary/20 shrink-0" />
+              <img
+                src={user.picture}
+                alt={user.name}
+                className="w-6 h-6 rounded-full border border-blue-500/30 shrink-0"
+              />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-                <UserIcon className="h-3.5 w-3.5 text-primary" />
+              <div className="w-6 h-6 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center shrink-0">
+                <UserIcon className="h-3 w-3 text-blue-400" />
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-bold text-white truncate leading-tight mb-0.5">{user.name}</div>
-              <div className="text-[9px] text-muted-foreground truncate leading-none">{user.email}</div>
+              <div className="text-[11px] font-semibold text-slate-200 truncate leading-tight">
+                {user.name}
+              </div>
+              <div className="text-[9.5px] text-slate-500 truncate leading-none mt-0.5">
+                {user.email}
+              </div>
             </div>
             <button
               onClick={logout}
-              className="text-muted-foreground hover:text-destructive transition-colors shrink-0 cursor-pointer"
+              className="text-slate-500 hover:text-rose-400 transition-colors shrink-0 cursor-pointer p-1"
               title="Log Out"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3 w-3" />
             </button>
           </div>
-        )}
-        <div className="text-[10px] text-muted-foreground/60 space-y-0.5 border-t border-sidebar-border/30 pt-2 flex items-center justify-between">
-          <span>SYSTEM: ONLINE</span>
-          <span className="text-success">LATENCY: 12ms</span>
         </div>
-      </div>
-    </div>
+      )}
+    </aside>
   );
 }

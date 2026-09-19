@@ -13,4 +13,5 @@ export type GetMarketQuotesParams = {
    */
   symbols: string;
   exchange?: GetMarketQuotesExchange;
+  source?: "yahoo" | "google";
 };

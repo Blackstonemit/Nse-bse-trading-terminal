@@ -12,7 +12,9 @@
     "@libsql/client": "^0.14.0"
   },
   "devDependencies": {
-    "electron": "^34.0.0",
+    "@workspace/api-server": "workspace:*",
+    "@workspace/market-dashboard": "workspace:*",
+    "electron": "^35.0.0",
     "electron-builder": "^25.0.0"
   },
   "build": {

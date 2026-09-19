@@ -27,6 +27,11 @@ Evaluate top candidates and assign a multibagger confidence rating.`;
 
     logger.info({ provider: aiRes.provider }, "Multibagger screener worker cycle complete");
     globalCache.set("last_multibagger_worker_run", new Date().toISOString(), 0);
+    globalCache.set("last_multibagger_worker_insight", {
+      provider: aiRes.provider,
+      timestamp: new Date().toISOString(),
+      content: aiRes.content,
+    }, 0);
   } catch (error) {
     logger.error({ err: error }, "Multibagger screener worker encountered error");
   }

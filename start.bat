@@ -63,7 +63,7 @@ echo   API Server:  http://localhost:8080/api/healthz
 echo.
 echo   Two terminal windows have opened:
 echo     - Blue window  = API Server (backend)
-     - Green window = Frontend (dashboard)
+echo     - Green window = Frontend (dashboard)
 echo.
 echo   To stop the app, close both terminal windows.
 echo ============================================================

@@ -52,6 +52,11 @@ async function startServer() {
     logger.info({ port }, "Server listening at http://127.0.0.1:" + port);
     startScheduler();
     initializeAutonomousWorkers();
+    
+    // Asynchronously sync recent NSE Bhavcopy archives in background if needed
+    import("./lib/bhavcopy-sync.js").then(({ syncLatestBhavcopy }) => {
+      syncLatestBhavcopy(3).catch((err) => logger.warn({ err }, "Initial Bhavcopy sync failed"));
+    });
   });
 }
 

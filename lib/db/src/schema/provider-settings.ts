@@ -10,6 +10,8 @@ export const providerSettings = sqliteTable("provider_settings", {
   provider: text("provider").notNull(),
   apiKey: text("api_key"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  customBaseUrl: text("custom_base_url"),
+  customModel: text("custom_model"),
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
 }, (t) => ({
   unq: unique().on(t.userId, t.provider)

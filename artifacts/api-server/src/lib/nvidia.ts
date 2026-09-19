@@ -14,10 +14,8 @@ export const NVIDIA_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
  * Pass these in the chat.completions.create() body alongside standard params.
  */
 export const NIM_REASONING_PARAMS = {
-  temperature: 1,
+  temperature: 0.7,
   top_p: 0.95,
-  max_tokens: 16384,
-  reasoning_budget: 16384,
-  chat_template_kwargs: { enable_thinking: true },
+  max_tokens: 4096,
 } as const;
 

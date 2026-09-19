@@ -18,6 +18,7 @@ import {
   getGetMarketQuotesQueryKey,
 } from "@workspace/api-client-react";
 import { useLiveRefresh } from "@/hooks/use-live-refresh";
+import { useSettings } from "@/lib/settings";
 import { LiveRefreshBar } from "@/components/live-refresh-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,6 @@ import {
   Info
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 // ── presets ──────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ function Level2OrderBook({ livePrice, symbol, setStopLoss, setTakeProfit }: Leve
   }, [livePrice]);
 
   return (
-    <Card className="rounded-sm border-muted bg-card">
+    <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
       <CardHeader className="p-3 border-b border-muted bg-muted/10">
         <CardTitle className="text-xs font-mono uppercase flex justify-between items-center">
           <span>L2 Order Book (Live Depth)</span>
@@ -341,15 +341,15 @@ export default function ScalpingPage() {
   // Fetch 5m candles (lookback 5d)
   const { data: history, isLoading: loadingHistory, isError: historyError } = useGetMarketHistory(
     { symbol, interval: "5m", period: "5d" },
-    { query: { staleTime: 15000, refetchInterval: 15000 } as any }
+    { query: { staleTime: 2000, refetchInterval: 3000 } as any }
   );
 
   const runAgent = useRunAgentAnalysis();
 
   // Fetch quote via react-query
   const { data: quotesData } = useGetMarketQuotes(
-    { symbols: symbol },
-    { query: { enabled: !!symbol, queryKey: getGetMarketQuotesQueryKey({ symbols: symbol }) } }
+    { symbols: symbol, source: settings.dataSource },
+    { query: { enabled: !!symbol, queryKey: getGetMarketQuotesQueryKey({ symbols: symbol, source: settings.dataSource }), refetchInterval: 2000, staleTime: 1000 } as any }
   );
 
   const quote = useMemo(() => {
@@ -425,7 +425,7 @@ export default function ScalpingPage() {
   const { isMarketOpen, isPreOpen, lastUpdatedIST, countdown, refresh: forceRefresh } = useLiveRefresh({
     onRefresh: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/market/history", { symbol, interval: "5m", period: "5d" }] });
-      queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: symbol }) });
+      queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: symbol, source: settings.dataSource }) });
       fetchActivePositions();
     },
   });
@@ -821,7 +821,7 @@ export default function ScalpingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chart Column */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="rounded-sm border-muted bg-card">
+          <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
             <CardHeader className="p-4 border-b border-muted bg-muted/10 flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
                 <CardTitle className="text-sm font-mono flex items-center gap-1.5 uppercase">
@@ -873,7 +873,7 @@ export default function ScalpingPage() {
           </Card>
 
           {/* Active Positions specific to Symbol */}
-          <Card className="rounded-sm border-muted bg-card">
+          <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
             <CardHeader className="p-4 border-b border-muted bg-muted/10">
               <CardTitle className="text-sm font-mono">ACTIVE POSITIONS ({symbol})</CardTitle>
             </CardHeader>
@@ -945,7 +945,7 @@ export default function ScalpingPage() {
         {/* AI signals Column */}
         <div className="space-y-6">
           {/* Signal Generator */}
-          <Card className="rounded-sm border-muted bg-card">
+          <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
             <CardHeader className="p-4 border-b border-muted bg-muted/10">
               <CardTitle className="text-sm font-mono">5M AI SCALPER ENGINE</CardTitle>
             </CardHeader>
@@ -1038,7 +1038,7 @@ export default function ScalpingPage() {
           </Card>
 
           {/* Keyboard Hotkeys Guide & Status */}
-          <Card className="rounded-sm border-muted bg-card">
+          <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
             <CardHeader className="p-3 border-b border-muted bg-muted/10 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-mono flex items-center gap-1.5 uppercase">
                 <Keyboard className="h-4 w-4 text-primary" /> Hotkey Configuration
@@ -1081,21 +1081,12 @@ export default function ScalpingPage() {
 
           {/* AI Result presentation */}
           {runAgent.isPending && (
-            <Card className="rounded-sm border-muted bg-card border-dashed">
-              <CardContent className="p-6 space-y-3">
-                <div className="flex items-center gap-2 text-primary font-mono text-xs">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>CONSULTING INDIAN derivatives AGENTS...</span>
-                </div>
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </CardContent>
+            <Card className="rounded-sm border-muted glass border-dashed shimmer h-32">
             </Card>
           )}
 
           {!runAgent.isPending && aiResult && (
-            <Card className="rounded-sm border-primary/30 border bg-card">
+            <Card className="rounded-sm border-primary/30 border glass hover-glow transition-all duration-200">
               <CardHeader className="p-4 border-b border-primary/20 bg-primary/5">
                 <div className="flex items-center justify-between">
                   <Badge variant="outline" className="border-primary/40 text-primary font-mono text-xs">

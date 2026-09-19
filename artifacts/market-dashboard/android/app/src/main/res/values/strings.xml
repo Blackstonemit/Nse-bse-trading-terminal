@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NSE/BSE Trading Terminal</string>
+    <string name="title_activity_main">NSE/BSE Trading Terminal</string>
+    <string name="package_name">com.nsebse.tradingterminal</string>
+    <string name="custom_url_scheme">com.nsebse.tradingterminal</string>
+</resources>

@@ -76,9 +76,8 @@ if exist "artifacts\api-server\.env" (
 ) else (
     echo  We need a few details to set up your environment.
     echo.
-    echo  Note: Press Enter to use the default SQLite database.
-    set DB_URL=file:../../database.db
-    set /p DB_URL="  Enter your database URL (default: file:../../database.db): "
+    set DB_URL=file:database.db
+    set /p DB_URL="  Enter your database URL (default: file:database.db): "
     
     set OAI_KEY=
     set /p OAI_KEY="  Enter your OpenAI API Key (or press Enter to skip): "

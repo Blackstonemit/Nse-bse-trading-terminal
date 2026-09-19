@@ -26,6 +26,11 @@ Evaluate debt reduction, operational turnaround signs, and positive cash flows.`
 
     logger.info({ provider: aiRes.provider }, "Penny stock screener worker cycle complete");
     globalCache.set("last_penny_worker_run", new Date().toISOString(), 0);
+    globalCache.set("last_penny_stock_worker_insight", {
+      provider: aiRes.provider,
+      timestamp: new Date().toISOString(),
+      content: aiRes.content,
+    }, 0);
   } catch (error) {
     logger.error({ err: error }, "Penny stock screener worker encountered error");
   }

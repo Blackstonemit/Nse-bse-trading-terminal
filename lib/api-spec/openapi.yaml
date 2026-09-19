@@ -53,6 +53,13 @@ paths:
             type: string
             enum: [NSE, BSE]
             default: NSE
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [yahoo, google]
+            default: yahoo
+          description: Data source to fetch quotes from (yahoo or google)
       responses:
         "200":
           description: Live quotes
@@ -227,6 +234,13 @@ paths:
       operationId: getScreenerMultibagger
       tags: [screener]
       summary: Get multibagger stock screening data for Indian stock exchange symbols
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Custom Screener.in query formula e.g. "Market Capitalization > 2000 AND Return on equity > 18"
       responses:
         "200":
           description: List of screened multibagger stock candidates
@@ -242,6 +256,13 @@ paths:
       operationId: getScreenerPenny
       tags: [screener]
       summary: Get high-growth penny and micro-cap stock screening data for Indian stock exchange symbols
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Custom Screener.in query formula for micro-caps e.g. "Market Capitalization < 150 AND Debt to equity < 0.3"
       responses:
         "200":
           description: List of screened penny and micro-cap stock candidates
@@ -251,6 +272,38 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PennyStock"
+
+  /screener/custom:
+    get:
+      operationId: getScreenerCustom
+      tags: [screener]
+      summary: Execute raw Screener.in query formula and return enriched stock candidates
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Raw Screener.in formula query e.g. "Market Capitalization > 1000 AND Return on equity > 20"
+      responses:
+        "200":
+          description: Custom Screener.in query results enriched with live quotes and fundamentals
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  count:
+                    type: integer
+                  stocks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MultibaggerStock"
+                  message:
+                    type: string
+
 
   /analysis/technical:
     get:

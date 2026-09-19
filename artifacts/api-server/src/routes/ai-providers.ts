@@ -27,12 +27,38 @@ router.post("/ai-providers/:provider/key", async (req: any, res) => {
       res.status(400).json({ error: "Invalid provider. Must be openai, claude, gemini, nvidia, ollama, or gemma." });
       return;
     }
-    const { apiKey } = req.body as { apiKey?: string };
-    if (provider !== "ollama" && (!apiKey || typeof apiKey !== "string" || apiKey.trim().length < 8)) {
-      res.status(400).json({ error: "Invalid API key" });
+    const { apiKey, customBaseUrl, customModel } = req.body as {
+      apiKey?: string;
+      customBaseUrl?: string;
+      customModel?: string;
+    };
+
+    const { providerSettings } = await import("@workspace/db");
+    const { db } = await import("@workspace/db");
+    const { and, eq } = await import("drizzle-orm");
+
+    const [existingRow] = await db
+      .select()
+      .from(providerSettings)
+      .where(and(eq(providerSettings.provider, provider), eq(providerSettings.userId, req.user!.id)))
+      .catch(() => []);
+
+    const hasApiKey = apiKey && typeof apiKey === "string" && apiKey.trim().length >= 8;
+    
+    if (provider !== "ollama" && !hasApiKey && !existingRow?.apiKey) {
+      res.status(400).json({ error: "API Key is required" });
       return;
     }
-    await saveProviderKey(provider, apiKey?.trim() || "", req.user!.id);
+
+    const finalKey = hasApiKey ? apiKey!.trim() : (existingRow?.apiKey || "");
+
+    await saveProviderKey(
+      provider,
+      finalKey,
+      req.user!.id,
+      customBaseUrl !== undefined ? (customBaseUrl?.trim() || null) : (existingRow?.customBaseUrl ?? null),
+      customModel !== undefined ? (customModel?.trim() || null) : (existingRow?.customModel ?? null)
+    );
     res.json({ success: true, provider });
   } catch (err) {
     req.log.error({ err }, "Failed to save provider key");

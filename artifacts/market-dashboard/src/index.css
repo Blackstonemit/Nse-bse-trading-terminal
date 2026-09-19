@@ -293,3 +293,333 @@
     inset: -1px;
   }
 }
+
+/* Accent Themes - Emerald */
+.theme-emerald {
+  --primary: 142.1 76.2% 36.3%;
+  --primary-foreground: 355.7 100% 97.3%;
+  --chart-1: 142.1 76.2% 36.3%;
+  --ring: 142.1 76.2% 36.3%;
+}
+.dark.theme-emerald, .dark .theme-emerald {
+  --primary: 142.1 70.6% 45.3%;
+  --primary-foreground: 144.4 61.5% 9.2%;
+  --chart-1: 142.1 70.6% 45.3%;
+  --ring: 142.1 70.6% 45.3%;
+}
+
+/* Accent Themes - Amber */
+.theme-amber {
+  --primary: 37.9 90.2% 50.1%;
+  --primary-foreground: 0 0% 98%;
+  --chart-1: 37.9 90.2% 50.1%;
+  --ring: 37.9 90.2% 50.1%;
+}
+.dark.theme-amber, .dark .theme-amber {
+  --primary: 37.9 90.2% 50.1%;
+  --primary-foreground: 0 0% 5%;
+  --chart-1: 37.9 90.2% 50.1%;
+  --ring: 37.9 90.2% 50.1%;
+}
+
+/* Accent Themes - Violet */
+.theme-violet {
+  --primary: 262.1 83.3% 57.8%;
+  --primary-foreground: 210 20% 98%;
+  --chart-1: 262.1 83.3% 57.8%;
+  --ring: 262.1 83.3% 57.8%;
+}
+.dark.theme-violet, .dark .theme-violet {
+  --primary: 263.4 70% 50.4%;
+  --primary-foreground: 210 20% 98%;
+  --chart-1: 263.4 70% 50.4%;
+  --ring: 263.4 70% 50.4%;
+}
+
+/* ─── Premium UI Utilities ─────────────────────────────────── */
+
+/* Ticker tape - continuous marquee animation */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@layer utilities {
+  .ticker-tape {
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, black 5%, black 95%, transparent);
+  }
+  .ticker-track {
+    display: flex;
+    gap: 3rem;
+    animation: ticker-scroll 60s linear infinite;
+    width: max-content;
+    will-change: transform;
+  }
+  .ticker-track:hover { animation-play-state: paused; }
+
+  /* Live data flash on price update */
+  @keyframes flash-green {
+    0% { background-color: hsl(142 71% 45% / 0.35); }
+    100% { background-color: transparent; }
+  }
+  @keyframes flash-red {
+    0% { background-color: hsl(0 84% 60% / 0.35); }
+    100% { background-color: transparent; }
+  }
+  .flash-up { animation: flash-green 0.6s ease-out; }
+  .flash-down { animation: flash-red 0.6s ease-out; }
+
+  /* Premium pointer cursor interactions */
+  .clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+  .clickable-row:hover { background-color: hsl(var(--accent) / 0.4); }
+
+  /* Confidence bar with shimmer */
+  @keyframes confidence-fill {
+    from { width: 0; }
+  }
+  .confidence-bar {
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    background: hsl(var(--muted) / 0.4);
+  }
+  .confidence-fill {
+    height: 100%;
+    border-radius: 3px;
+    animation: confidence-fill 0.7s ease-out forwards;
+    position: relative;
+    overflow: hidden;
+  }
+  .confidence-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer-slide 2s infinite;
+  }
+
+  /* Section heading accent */
+  .heading-accent {
+    position: relative;
+    padding-left: 12px;
+  }
+  .heading-accent::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--chart-5)));
+  }
+
+  /* P&L animated counter */
+  .pnl-positive {
+    color: hsl(var(--success));
+    text-shadow: 0 0 12px hsl(var(--success) / 0.3);
+  }
+  .pnl-negative {
+    color: hsl(var(--destructive));
+    text-shadow: 0 0 12px hsl(var(--destructive) / 0.3);
+  }
+
+  /* Premium card hover with subtle gradient sheen */
+  .card-premium {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
+  .card-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), hsl(var(--primary) / 0.08), transparent 40%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .card-premium:hover::before { opacity: 1; }
+
+  /* IV Heatmap gradient - cool to hot */
+  .iv-cool { background: hsl(220 70% 45% / 0.7); color: white; }
+  .iv-mid  { background: hsl(180 65% 45% / 0.7); color: white; }
+  .iv-warm { background: hsl(45 90% 55% / 0.7); color: black; }
+  .iv-hot  { background: hsl(0 80% 55% / 0.75); color: white; }
+
+  /* Mini sparkline chart container */
+  .sparkline {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 24px;
+    width: 64px;
+  }
+  .sparkline-bar {
+    flex: 1;
+    background: hsl(var(--primary));
+    border-radius: 1px 1px 0 0;
+    min-width: 2px;
+  }
+
+  /* Sticky table header for trades */
+  .table-sticky-header thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: hsl(var(--card));
+    backdrop-filter: blur(8px);
+  }
+
+  /* Animated gradient border for active items */
+  @keyframes border-spin {
+    to { transform: rotate(360deg); }
+  }
+  .gradient-border-active {
+    position: relative;
+    isolation: isolate;
+  }
+  .gradient-border-active::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: conic-gradient(
+      from 0deg,
+      hsl(var(--primary)),
+      hsl(var(--chart-5)),
+      hsl(var(--primary))
+    );
+    animation: border-spin 4s linear infinite;
+    opacity: 0.6;
+  }
+}
+
+/* Glassmorphism card surfaces */
+@layer utilities {
+  .glass {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: hsl(var(--card) / 0.72);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .glass-subtle {
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    background: hsl(var(--card) / 0.55);
+    border: 1px solid hsl(var(--border) / 0.3);
+  }
+}
+
+/* Gradient border accents */
+@layer utilities {
+  .gradient-border-bullish {
+    border-image: linear-gradient(135deg, hsl(142 71% 45%), hsl(185 72% 48%)) 1;
+  }
+
+  .gradient-border-bearish {
+    border-image: linear-gradient(135deg, hsl(0 84% 60%), hsl(38 92% 50%)) 1;
+  }
+
+  .border-glow-primary {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15), 0 0 12px -2px hsl(var(--primary) / 0.2);
+  }
+
+  .border-glow-success {
+    box-shadow: 0 0 0 1px hsl(var(--success) / 0.15), 0 0 12px -2px hsl(var(--success) / 0.2);
+  }
+
+  .border-glow-destructive {
+    box-shadow: 0 0 0 1px hsl(var(--destructive) / 0.15), 0 0 12px -2px hsl(var(--destructive) / 0.2);
+  }
+}
+
+/* Micro-animations */
+@layer utilities {
+  /* Live dot pulser for connected/live states */
+  .live-pulse {
+    position: relative;
+  }
+  .live-pulse::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: hsl(var(--success));
+    transform: translateY(-50%);
+    animation: live-dot 2s ease-in-out infinite;
+  }
+
+  /* Shimmer skeleton for loading states */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted) / 0.3) 25%,
+      hsl(var(--muted) / 0.6) 50%,
+      hsl(var(--muted) / 0.3) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-slide 1.5s ease-in-out infinite;
+  }
+
+  /* Hover card glow + lift */
+  .hover-glow {
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 20px -4px hsl(var(--primary) / 0.15), 0 8px 24px -8px hsl(0 0% 0% / 0.2);
+    transform: translateY(-1px);
+  }
+
+  /* Tabular number animation */
+  .num-tick {
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+  }
+
+  /* Gradient text for headings */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--chart-5)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@keyframes live-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 hsl(var(--success) / 0.4); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 4px hsl(var(--success) / 0); }
+}
+
+@keyframes shimmer-slide {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Refined Scrollbars (Dark Theme) ──────────────────────── */
+@layer base {
+  .dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}

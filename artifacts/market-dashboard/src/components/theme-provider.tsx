@@ -6,32 +6,42 @@ type ThemeProviderProps = {
 };
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setTheme] = useState(loadSettings().theme);
+  const [settings, setSettings] = useState(() => loadSettings());
 
   useEffect(() => {
     // Listen for custom settings update event to reflect changes immediately
     const handleSettingsUpdated = () => {
-      setTheme(loadSettings().theme);
+      setSettings(loadSettings());
     };
 
     window.addEventListener("settingsUpdated", handleSettingsUpdated);
     return () => window.removeEventListener("settingsUpdated", handleSettingsUpdated);
   }, []);
 
+  const theme = settings.theme;
+  const themeAccent = settings.themeAccent || "blue";
+
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
 
+    let activeTheme = theme;
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      activeTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
-      root.classList.add(systemTheme);
-      return;
     }
 
-    root.classList.add(theme);
-  }, [theme]);
+    root.classList.add(activeTheme);
+
+    // Apply accent class (theme-blue, theme-emerald, theme-amber, theme-violet)
+    root.classList.forEach((cls) => {
+      if (cls.startsWith("theme-")) {
+        root.classList.remove(cls);
+      }
+    });
+    root.classList.add(`theme-${themeAccent}`);
+  }, [theme, themeAccent]);
 
   // Also listen for system preference changes if in system mode
   useEffect(() => {

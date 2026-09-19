@@ -7,6 +7,7 @@ import {
   getGetMarketQuotesQueryKey
 } from "@workspace/api-client-react";
 import { useLiveRefresh } from "@/hooks/use-live-refresh";
+import { useSettings } from "@/lib/settings";
 import { LiveRefreshBar } from "@/components/live-refresh-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,22 +71,32 @@ const QuoteTable = React.memo(function QuoteTable({ data, isLoading }: { data: a
 
 export default function MarketFeed() {
   const queryClient = useQueryClient();
+  const { settings } = useSettings();
 
-  const { data: movers, isLoading: loadingMovers } = useGetMarketMovers();
+  const { data: movers, isLoading: loadingMovers } = useGetMarketMovers({
+    query: { refetchInterval: 5000 } as any,
+  });
   const { data: watchlist } = useGetWatchlist();
   
   const watchlistSymbols = Array.isArray(watchlist) ? watchlist.map(w => w.symbol).join(",") : "";
   
   const { data: quotes, isLoading: loadingQuotes } = useGetMarketQuotes(
-    { symbols: watchlistSymbols },
-    { query: { enabled: !!watchlistSymbols, queryKey: getGetMarketQuotesQueryKey({ symbols: watchlistSymbols }) } }
+    { symbols: watchlistSymbols, source: settings.dataSource },
+    {
+      query: {
+        enabled: !!watchlistSymbols,
+        queryKey: getGetMarketQuotesQueryKey({ symbols: watchlistSymbols, source: settings.dataSource }),
+        refetchInterval: 3000,
+        staleTime: 1000,
+      } as any,
+    }
   );
 
   const { isMarketOpen, isPreOpen, lastUpdatedIST, countdown, refresh } = useLiveRefresh({
     onRefresh: () => {
       queryClient.invalidateQueries({ queryKey: getGetMarketMoversQueryKey() });
       if (watchlistSymbols) {
-        queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: watchlistSymbols }) });
+        queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: watchlistSymbols, source: settings.dataSource }) });
       }
     },
   });

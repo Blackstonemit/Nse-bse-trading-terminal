@@ -135,6 +135,37 @@ function calcRSI(closes: number[], period = 14): (number | null)[] {
   return result;
 }
 
+function calcMACD(closes: number[], fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+  const fastEma = calcEMA(closes, fastPeriod);
+  const slowEma = calcEMA(closes, slowPeriod);
+  
+  const macdLine = closes.map((_, i) => {
+    const f = fastEma[i];
+    const s = slowEma[i];
+    if (f === null || s === null) return null;
+    return f - s;
+  });
+
+  const firstValidIdx = macdLine.findIndex((v) => v !== null);
+  const signalLine: (number | null)[] = new Array(macdLine.length).fill(null);
+  
+  if (firstValidIdx !== -1) {
+    const validMacd = macdLine.slice(firstValidIdx) as number[];
+    const emaOfMacd = calcEMA(validMacd, signalPeriod);
+    for (let i = 0; i < emaOfMacd.length; i++) {
+      signalLine[firstValidIdx + i] = emaOfMacd[i];
+    }
+  }
+
+  const histogram = macdLine.map((m, i) => {
+    const s = signalLine[i];
+    if (m === null || s === null) return null;
+    return m - s;
+  });
+
+  return { macdLine, signalLine, histogram };
+}
+
 // ── Colors ────────────────────────────────────────────────────────────────────
 
 const C = {
@@ -155,6 +186,10 @@ const C = {
   rsi:          "#22d3ee",
   rsiOB:        "rgba(239,68,68,0.15)",
   rsiOS:        "rgba(34,197,94,0.15)",
+  macdLine:     "#3b82f6",
+  macdSignal:   "#ef4444",
+  macdHistUp:   "rgba(34,197,94,0.6)",
+  macdHistDown: "rgba(239,68,68,0.6)",
 };
 
 const CHART_OPTS = {
@@ -167,7 +202,7 @@ const CHART_OPTS = {
 
 // ── Overlay toggles ───────────────────────────────────────────────────────────
 
-type OverlayKey = "sma20" | "ema9" | "bb" | "vol" | "rsi";
+type OverlayKey = "sma20" | "ema9" | "bb" | "vol" | "rsi" | "macd";
 
 const OVERLAY_LABELS: Record<OverlayKey, string> = {
   sma20: "SMA 20",
@@ -175,6 +210,7 @@ const OVERLAY_LABELS: Record<OverlayKey, string> = {
   bb:    "Bollinger",
   vol:   "Volume",
   rsi:   "RSI 14",
+  macd:  "MACD (12, 26, 9)",
 };
 
 // ── Search result type ────────────────────────────────────────────────────────
@@ -207,7 +243,7 @@ export function ChartCellComponent({
   );
   const [chartStyle, setChartStyle] = useState<ChartStyle>("candles");
   const [overlays, setOverlays] = useState<Record<OverlayKey, boolean>>({
-    sma20: true, ema9: true, bb: false, vol: true, rsi: true,
+    sma20: true, ema9: true, bb: false, vol: true, rsi: true, macd: false,
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -229,8 +265,10 @@ export function ChartCellComponent({
 
   const mainRef = useRef<HTMLDivElement>(null);
   const rsiRef = useRef<HTMLDivElement>(null);
+  const macdRef = useRef<HTMLDivElement>(null);
   const mainChart = useRef<IChartApi | null>(null);
   const rsiChart = useRef<IChartApi | null>(null);
+  const macdChart = useRef<IChartApi | null>(null);
 
   const processed = useMemo(() => {
     if (!history || !Array.isArray(history.candles) || history.candles.length === 0) return null;
@@ -303,12 +341,32 @@ export function ChartCellComponent({
       v !== null ? { time: times[i], value: v } : null
     ).filter(Boolean) as LineData[];
 
+    const macdResult = calcMACD(closes);
+    const macdLineData: LineData[] = macdResult.macdLine.map((v, i) =>
+      v !== null ? { time: times[i], value: v } : null
+    ).filter(Boolean) as LineData[];
+
+    const macdSignalData: LineData[] = macdResult.signalLine.map((v, i) =>
+      v !== null ? { time: times[i], value: v } : null
+    ).filter(Boolean) as LineData[];
+
+    const macdHistData: HistogramData[] = macdResult.histogram.map((v, i) =>
+      v !== null ? {
+        time: times[i],
+        value: v,
+        color: v >= 0 ? C.macdHistUp : C.macdHistDown,
+      } : null
+    ).filter(Boolean) as HistogramData[];
+
     const last = deduplicated[deduplicated.length - 1];
     const prev = deduplicated[deduplicated.length - 2];
     const chg = last && prev ? last.close - prev.close : 0;
     const chgPct = prev ? (chg / prev.close) * 100 : 0;
 
-    return { ohlc, volume, sma20Data, ema9Data, bbUpper, bbMid, bbLower, rsiData, last, chg, chgPct };
+    return {
+      ohlc, volume, sma20Data, ema9Data, bbUpper, bbMid, bbLower, rsiData,
+      macdLineData, macdSignalData, macdHistData, last, chg, chgPct
+    };
   }, [history]);
 
   useEffect(() => {
@@ -316,8 +374,10 @@ export function ChartCellComponent({
 
     mainChart.current?.remove();
     rsiChart.current?.remove();
+    macdChart.current?.remove();
     mainChart.current = null;
     rsiChart.current = null;
+    macdChart.current = null;
 
     const mc = createChart(mainRef.current, {
       ...CHART_OPTS,
@@ -372,8 +432,10 @@ export function ChartCellComponent({
 
     mc.timeScale().fitContent();
 
+    let rc: IChartApi | null = null;
+    let rsiSeries: any = null;
     if (overlays.rsi && rsiRef.current) {
-      const rc = createChart(rsiRef.current, {
+      rc = createChart(rsiRef.current, {
         ...CHART_OPTS,
         width: rsiRef.current.clientWidth,
         height: rsiRef.current.clientHeight,
@@ -382,8 +444,8 @@ export function ChartCellComponent({
       });
       rsiChart.current = rc;
 
-      const rs = rc.addSeries(LineSeries, { color: C.rsi, lineWidth: 2, title: "RSI 14" });
-      rs.setData(processed.rsiData);
+      rsiSeries = rc.addSeries(LineSeries, { color: C.rsi, lineWidth: 2, title: "RSI 14" });
+      rsiSeries.setData(processed.rsiData);
 
       const ob70 = rc.addSeries(LineSeries, { color: "rgba(239,68,68,0.5)", lineWidth: 1, lineStyle: 2 });
       ob70.setData(processed.rsiData.map((d) => ({ time: d.time, value: 70 })));
@@ -391,26 +453,63 @@ export function ChartCellComponent({
       os30.setData(processed.rsiData.map((d) => ({ time: d.time, value: 30 })));
 
       rc.timeScale().fitContent();
-
-      mc.subscribeCrosshairMove((p) => {
-        if (!p.time) return;
-        rc.setCrosshairPosition(0, p.time as UTCTimestamp, rs);
-      });
     }
+
+    let mc2: IChartApi | null = null;
+    let macdSeries: any = null;
+    if (overlays.macd && macdRef.current) {
+      mc2 = createChart(macdRef.current, {
+        ...CHART_OPTS,
+        width: macdRef.current.clientWidth,
+        height: macdRef.current.clientHeight,
+        rightPriceScale: { ...CHART_OPTS.rightPriceScale, scaleMargins: { top: 0.1, bottom: 0.1 } },
+        timeScale: { ...CHART_OPTS.timeScale, visible: false },
+      });
+      macdChart.current = mc2;
+
+      const histSeries = mc2.addSeries(HistogramSeries, {
+        color: C.macdHistUp,
+        priceFormat: { type: "volume" },
+        title: "Histogram",
+      });
+      histSeries.setData(processed.macdHistData);
+
+      macdSeries = mc2.addSeries(LineSeries, { color: C.macdLine, lineWidth: 2, title: "MACD" });
+      macdSeries.setData(processed.macdLineData);
+
+      const signalSeries = mc2.addSeries(LineSeries, { color: C.macdSignal, lineWidth: 2, title: "Signal" });
+      signalSeries.setData(processed.macdSignalData);
+
+      mc2.timeScale().fitContent();
+    }
+
+    mc.subscribeCrosshairMove((p) => {
+      if (!p.time) return;
+      if (rc && rsiSeries) {
+        rc.setCrosshairPosition(0, p.time as UTCTimestamp, rsiSeries);
+      }
+      if (mc2 && macdSeries) {
+        mc2.setCrosshairPosition(0, p.time as UTCTimestamp, macdSeries);
+      }
+    });
 
     const ro = new ResizeObserver(() => {
       if (mainRef.current) mc.applyOptions({ width: mainRef.current.clientWidth, height: mainRef.current.clientHeight });
       if (rsiRef.current && rsiChart.current) rsiChart.current.applyOptions({ width: rsiRef.current.clientWidth, height: rsiRef.current.clientHeight });
+      if (macdRef.current && macdChart.current) macdChart.current.applyOptions({ width: macdRef.current.clientWidth, height: macdRef.current.clientHeight });
     });
     if (mainRef.current) ro.observe(mainRef.current);
     if (rsiRef.current) ro.observe(rsiRef.current);
+    if (macdRef.current) ro.observe(macdRef.current);
 
     return () => {
       ro.disconnect();
       mainChart.current?.remove();
       rsiChart.current?.remove();
+      macdChart.current?.remove();
       mainChart.current = null;
       rsiChart.current = null;
+      macdChart.current = null;
     };
   }, [processed, chartStyle, overlays]);
 
@@ -607,13 +706,41 @@ export function ChartCellComponent({
         )}
         {!isLoading && !isError && processed && (
           <div className="flex-1 flex flex-col min-h-0">
-            <div ref={mainRef} className={cn("w-full", overlays.rsi ? "h-[70%]" : "h-full")} />
+            <div
+              ref={mainRef}
+              className={cn(
+                "w-full",
+                overlays.rsi && overlays.macd ? "h-[50%]" :
+                overlays.rsi || overlays.macd ? "h-[70%]" :
+                "h-full"
+              )}
+            />
             {overlays.rsi && (
               <>
                 <div className="border-t border-[#1c1c1c] px-2 py-0.5 shrink-0 text-[8px] text-cyan-500/70 font-mono">
                   RSI (14)
                 </div>
-                <div ref={rsiRef} className="w-full h-[28%]" />
+                <div
+                  ref={rsiRef}
+                  className={cn(
+                    "w-full",
+                    overlays.macd ? "h-[22%]" : "h-[28%]"
+                  )}
+                />
+              </>
+            )}
+            {overlays.macd && (
+              <>
+                <div className="border-t border-[#1c1c1c] px-2 py-0.5 shrink-0 text-[8px] text-blue-500/70 font-mono">
+                  MACD (12, 26, 9)
+                </div>
+                <div
+                  ref={macdRef}
+                  className={cn(
+                    "w-full",
+                    overlays.rsi ? "h-[22%]" : "h-[28%]"
+                  )}
+                />
               </>
             )}
           </div>

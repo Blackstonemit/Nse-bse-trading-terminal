@@ -69,6 +69,7 @@ class NSEClient {
       const home = await fetch(NSE_BASE, {
         headers: BROWSER_HEADERS,
         redirect: "follow",
+        signal: AbortSignal.timeout(2000),
       });
       let cookies = this.extractCookies(home);
 
@@ -76,6 +77,7 @@ class NSEClient {
       const oc = await fetch(`${NSE_BASE}/option-chain`, {
         headers: { ...BROWSER_HEADERS, Cookie: cookies },
         redirect: "follow",
+        signal: AbortSignal.timeout(2000),
       });
       cookies = this.mergeCookies(cookies, this.extractCookies(oc));
 
@@ -100,14 +102,16 @@ class NSEClient {
     const url = `${NSE_BASE}/api${path}`;
     let response = await fetch(url, {
       headers: { ...API_HEADERS, Cookie: this.cookies },
+      signal: AbortSignal.timeout(2500),
     });
 
     // If session expired, refresh once and retry
     if (response.status === 401 || response.status === 403 || response.status === 429) {
-      logger.warn({ status: response.status, path }, "NSE session expired, refreshing");
+      logger.warn({ status: response.status, path }, "NSE session expired or challenged, refreshing");
       await this.refreshSession();
       response = await fetch(url, {
         headers: { ...API_HEADERS, Cookie: this.cookies },
+        signal: AbortSignal.timeout(2500),
       });
     }
 

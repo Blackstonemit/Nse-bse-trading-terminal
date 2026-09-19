@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { useSettings } from "@/lib/settings";
+import { useGetMarketQuotes } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -75,10 +76,31 @@ export default function OptionsStrategyPage() {
   const queryClient = useQueryClient();
 
   const [symbol, setSymbol] = useState(settings.defaultSymbol || "NIFTY");
-  const [underlyingPrice, setUnderlyingPrice] = useState(22000);
-  const [legs, setLegs] = useState<StrategyLeg[]>(PRESETS.bullCall.getLegs(22000));
+  const [underlyingPrice, setUnderlyingPrice] = useState(25000);
+  const [legs, setLegs] = useState<StrategyLeg[]>(PRESETS.bullCall.getLegs(25000));
   const [preset, setPreset] = useState("bullCall");
   const [executing, setExecuting] = useState(false);
+
+  // Live market quote fetch for underlying
+  const { data: quotesData } = useGetMarketQuotes(
+    { symbols: symbol },
+    {
+      query: {
+        refetchInterval: 5000,
+      } as any,
+    }
+  );
+
+  useEffect(() => {
+    const quoteList = Array.isArray(quotesData) ? quotesData : (quotesData as any)?.quotes;
+    const liveLtp = quoteList?.[0]?.lastPrice;
+    if (liveLtp && liveLtp > 0 && Math.abs(liveLtp - underlyingPrice) > 5) {
+      setUnderlyingPrice(liveLtp);
+      if (preset !== "custom" && PRESETS[preset]) {
+        setLegs(PRESETS[preset].getLegs(liveLtp));
+      }
+    }
+  }, [quotesData, preset]);
 
   // Sync preset choice to legs
   const handlePresetChange = (key: string) => {

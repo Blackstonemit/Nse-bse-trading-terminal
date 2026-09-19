@@ -4,6 +4,7 @@ const yahooFinance = new (YahooFinanceClass as any)();
 import { RSI } from "technicalindicators";
 import { globalCache } from "../lib/cache.js";
 import { logger } from "../lib/logger.js";
+import { fetchScreenerSymbols } from "../lib/screenerClient.js";
 
 const router: IRouter = Router();
 
@@ -192,9 +193,24 @@ function calculateTurnaroundScore(data: {
 }
 
 // ─── Live Data Enrichment: Multibagger ──────────────────────────────────────
-async function fetchLiveMultibaggerData(): Promise<MultibaggerStockData[]> {
+async function fetchLiveMultibaggerData(symbols?: string[]): Promise<MultibaggerStockData[]> {
+  const catalog = symbols && symbols.length > 0
+    ? symbols.map(sym => {
+        const existing = MULTIBAGGER_CATALOG.find(x => x.symbol === sym);
+        return existing || {
+          symbol: sym,
+          name: sym,
+          sector: "Screener.in Pick",
+          tags: ["SCREENER_PICK"],
+          salesCagr3Yr: 25.0,
+          profitCagr3Yr: 30.0,
+          freeCashFlowCr: 100,
+        };
+      })
+    : MULTIBAGGER_CATALOG;
+
   const results = await Promise.allSettled(
-    MULTIBAGGER_CATALOG.map(async (entry): Promise<MultibaggerStockData> => {
+    catalog.map(async (entry): Promise<MultibaggerStockData> => {
       const yahooSym = toYahooSymbol(entry.symbol);
 
       // Fetch quoteSummary for fundamental metrics + quote for live price/volume
@@ -280,9 +296,23 @@ async function fetchLiveMultibaggerData(): Promise<MultibaggerStockData[]> {
 }
 
 // ─── Live Data Enrichment: Penny Stocks ─────────────────────────────────────
-async function fetchLivePennyData(): Promise<PennyStockData[]> {
+async function fetchLivePennyData(symbols?: string[]): Promise<PennyStockData[]> {
+  const catalog = symbols && symbols.length > 0
+    ? symbols.map(sym => {
+        const existing = PENNY_CATALOG.find(x => x.symbol === sym);
+        return existing || {
+          symbol: sym,
+          name: sym,
+          sector: "Screener.in Pick",
+          tags: ["SCREENER_PICK"],
+          salesCagr3Yr: 20.0,
+          profitCagr3Yr: 25.0,
+        };
+      })
+    : PENNY_CATALOG;
+
   const results = await Promise.allSettled(
-    PENNY_CATALOG.map(async (entry): Promise<PennyStockData> => {
+    catalog.map(async (entry): Promise<PennyStockData> => {
       const yahooSym = toYahooSymbol(entry.symbol);
 
       const [summaryResult, quoteResult] = await Promise.all([
@@ -351,15 +381,31 @@ async function fetchLivePennyData(): Promise<PennyStockData[]> {
 
 router.get("/multibagger", async (req, res) => {
   try {
-    const cacheKey = "screener_multibagger_live";
+    const username = req.headers["x-screener-username"] as string | undefined;
+    const password = req.headers["x-screener-password"] as string | undefined;
+    const customQuery = (req.query.query || req.query.q) as string | undefined;
+
+    const cacheKey = customQuery
+      ? `screener_multibagger_${customQuery}_${username || "default"}`
+      : username
+      ? `screener_multibagger_live_${username}`
+      : "screener_multibagger_live";
+
     const cached = globalCache.get<MultibaggerStockData[]>(cacheKey);
     if (cached) {
       res.json(cached);
       return;
     }
 
+    let symbols: string[] | undefined = undefined;
+    if ((username && password) || (process.env.SCREENER_USERNAME && process.env.SCREENER_PASSWORD)) {
+      const query = customQuery || "Market Capitalization > 2000 AND Return on equity > 18 AND Debt to equity < 0.5 AND Sales growth 3years > 15 AND Profit growth 3years > 20";
+      logger.info({ query }, "Fetching dynamic stock symbols from Screener.in for Multibagger Screener...");
+      symbols = await fetchScreenerSymbols(query, { username, password });
+    }
+
     logger.info("Fetching live multibagger screener data from Yahoo Finance...");
-    const data = await fetchLiveMultibaggerData();
+    const data = await fetchLiveMultibaggerData(symbols);
     globalCache.set(cacheKey, data, 300000); // 5 minutes cache
     res.json(data);
   } catch (error) {
@@ -370,15 +416,31 @@ router.get("/multibagger", async (req, res) => {
 
 router.get("/penny", async (req, res) => {
   try {
-    const cacheKey = "screener_penny_live";
+    const username = req.headers["x-screener-username"] as string | undefined;
+    const password = req.headers["x-screener-password"] as string | undefined;
+    const customQuery = (req.query.query || req.query.q) as string | undefined;
+
+    const cacheKey = customQuery
+      ? `screener_penny_${customQuery}_${username || "default"}`
+      : username
+      ? `screener_penny_live_${username}`
+      : "screener_penny_live";
+
     const cached = globalCache.get<PennyStockData[]>(cacheKey);
     if (cached) {
       res.json(cached);
       return;
     }
 
+    let symbols: string[] | undefined = undefined;
+    if ((username && password) || (process.env.SCREENER_USERNAME && process.env.SCREENER_PASSWORD)) {
+      const query = customQuery || "Market Capitalization < 150 AND Current price < 100 AND Debt to equity < 0.3 AND Sales growth 3years > 10 AND Net Profit > 0";
+      logger.info({ query }, "Fetching dynamic stock symbols from Screener.in for Penny Stock Screener...");
+      symbols = await fetchScreenerSymbols(query, { username, password });
+    }
+
     logger.info("Fetching live penny stock screener data from Yahoo Finance...");
-    const data = await fetchLivePennyData();
+    const data = await fetchLivePennyData(symbols);
     globalCache.set(cacheKey, data, 300000); // 5 minutes cache
     res.json(data);
   } catch (error) {
@@ -387,4 +449,68 @@ router.get("/penny", async (req, res) => {
   }
 });
 
+// ─── Custom Screener.in Query Endpoint ──────────────────────────────────────
+// Runs any raw Screener.in query formula and enriches matching stocks.
+const handleCustomQuery = async (req: any, res: any) => {
+  try {
+    const username = req.headers["x-screener-username"] as string | undefined;
+    const password = req.headers["x-screener-password"] as string | undefined;
+    const query = (req.query.query || req.query.q || req.body?.query || req.body?.q) as string | undefined;
+
+    if (!query || typeof query !== "string" || !query.trim()) {
+      res.status(400).json({ error: "Missing required query parameter or body property 'query' or 'q'" });
+      return;
+    }
+
+    const trimmedQuery = query.trim();
+    const cacheKey = `screener_custom_${Buffer.from(trimmedQuery).toString("base64")}_${username || "default"}`;
+    const cached = globalCache.get<MultibaggerStockData[]>(cacheKey);
+    if (cached) {
+      res.json({ query: trimmedQuery, count: cached.length, stocks: cached });
+      return;
+    }
+
+    logger.info({ query: trimmedQuery }, "Running dynamic Screener.in raw formula query...");
+    const symbols = await fetchScreenerSymbols(trimmedQuery, { username, password });
+
+    if (!symbols || symbols.length === 0) {
+      logger.warn({ query: trimmedQuery }, "No symbols returned from Screener.in query or missing credentials");
+      res.json({
+        query: trimmedQuery,
+        count: 0,
+        stocks: [],
+        message: "No symbols matched the Screener.in query or credentials were not provided."
+      });
+      return;
+    }
+
+    logger.info({ count: symbols.length }, "Enriching matched symbols from Yahoo Finance & Technicals...");
+    const stocks = await fetchLiveMultibaggerData(symbols);
+    globalCache.set(cacheKey, stocks, 300000); // 5 minutes cache
+
+    res.json({
+      query: trimmedQuery,
+      count: stocks.length,
+      stocks,
+    });
+  } catch (error: any) {
+    logger.error({ err: error }, "Error processing custom Screener.in query");
+    res.status(500).json({ error: error?.message || "Failed to process custom Screener.in query" });
+  }
+};
+
+router.get("/custom", handleCustomQuery);
+router.post("/custom", handleCustomQuery);
+
+router.get("/multibagger/insight", (req, res) => {
+  const insight = globalCache.get("last_multibagger_worker_insight");
+  res.json(insight || null);
+});
+
+router.get("/penny/insight", (req, res) => {
+  const insight = globalCache.get("last_penny_stock_worker_insight");
+  res.json(insight || null);
+});
+
 export default router;
+

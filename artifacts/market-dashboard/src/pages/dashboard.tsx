@@ -10,6 +10,7 @@ import {
   useAddToWatchlist, useRemoveFromWatchlist
 } from "@workspace/api-client-react";
 import { useLiveRefresh } from "@/hooks/use-live-refresh";
+import { useSettings } from "@/lib/settings";
 import { LiveRefreshBar } from "@/components/live-refresh-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -394,10 +395,19 @@ export default function Dashboard() {
     }
   };
 
-  const { data: indices, isLoading: loadingIndices } = useGetMarketIndices();
-  const { data: movers,  isLoading: loadingMovers  } = useGetMarketMovers();
-  const { data: summary, isLoading: loadingSummary } = useGetAnalysisSummary();
-  const { data: signals, isLoading: loadingSignals } = useGetSignals({ status: "ACTIVE" });
+  const { data: indices, isLoading: loadingIndices } = useGetMarketIndices({
+    query: { refetchInterval: 3000 } as any,
+  });
+  const { data: movers,  isLoading: loadingMovers  } = useGetMarketMovers({
+    query: { refetchInterval: 5000 } as any,
+  });
+  const { data: summary, isLoading: loadingSummary } = useGetAnalysisSummary({
+    query: { refetchInterval: 10000 } as any,
+  });
+  const { data: signals, isLoading: loadingSignals } = useGetSignals(
+    { status: "ACTIVE" },
+    { query: { refetchInterval: 5000 } as any }
+  );
 
   const { data: globalIndices, isLoading: loadingGlobal } = useQuery<GlobalIndex[]>({
     queryKey: ["/api/market/global"],
@@ -407,7 +417,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error("Failed to fetch global indices");
       return res.json();
     },
-    refetchInterval: 60000,
+    refetchInterval: 15000,
   });
 
   // ── Pinned symbols state (Unified with Watchlist) ────────────────────────────
@@ -477,9 +487,17 @@ export default function Dashboard() {
     }
   }, [watchlistData, removeWatchlistMutation, queryClient, toast]);
 
+  const { settings } = useSettings();
+
   const { data: pinnedQuotesData, isLoading: quotesLoading } = useGetMarketQuotes(
-    { symbols: pinsSymbols },
-    { query: { enabled: !!pinsSymbols, queryKey: getGetMarketQuotesQueryKey({ symbols: pinsSymbols }) } }
+    { symbols: pinsSymbols, source: settings.dataSource },
+    {
+      query: {
+        enabled: !!pinsSymbols,
+        queryKey: getGetMarketQuotesQueryKey({ symbols: pinsSymbols, source: settings.dataSource }),
+        refetchInterval: 3000,
+      } as any,
+    }
   );
 
   const pinnedQuotes = useMemo(() => {
@@ -501,7 +519,7 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: getGetAnalysisSummaryQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetSignalsQueryKey({ status: "ACTIVE" }) });
       if (pinsSymbols) {
-        queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: pinsSymbols }) });
+        queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: pinsSymbols, source: settings.dataSource }) });
       }
     },
   });
@@ -510,7 +528,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight font-mono">LIVE DASHBOARD</h1>
+        <h1 className="text-2xl font-bold tracking-tight font-mono pl-5 live-pulse">LIVE DASHBOARD</h1>
           <LiveRefreshBar
           isMarketOpen={isMarketOpen}
           isPreOpen={isPreOpen}
@@ -528,7 +546,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {loadingIndices
             ? Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="rounded-sm border-muted">
+                <Card key={i} className="rounded-sm border-muted glass">
                   <CardContent className="p-4">
                     <Skeleton className="h-4 w-24 mb-2" />
                     <Skeleton className="h-8 w-32" />
@@ -537,7 +555,7 @@ export default function Dashboard() {
               ))
             : Array.isArray(indices)
             ? indices.map((idx) => (
-                <Card key={idx.symbol} className="rounded-sm border-muted bg-card">
+                <Card key={idx.symbol} className="rounded-sm border-muted glass hover-glow transition-all duration-200">
                   <CardContent className="p-4 flex flex-col justify-between h-full">
                     <div className="text-sm font-medium text-muted-foreground">{idx.name}</div>
                     <div className="flex items-baseline justify-between mt-2">
@@ -604,7 +622,7 @@ export default function Dashboard() {
       </div>
 
       {/* Global Markets Horizontal Ticker */}
-      <Card className="rounded-sm border-muted bg-card">
+      <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
         <CardContent className="p-0">
           {loadingGlobal ? (
             <div className="flex px-4 py-3 items-center gap-4 animate-pulse">
@@ -625,7 +643,7 @@ export default function Dashboard() {
                     <div key={idx.id} className="flex items-center gap-2 text-xs font-mono shrink-0">
                       <span className="font-bold">{idx.name}</span>
                       <span>{idx.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className={cn("flex items-center", isUp ? "text-green-500" : "text-red-500")}>
+                      <span className={cn("flex items-center animate-pulse", isUp ? "text-green-500" : "text-red-500")}>
                         {isUp ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
                         {idx.changePercent.toFixed(2)}%
                       </span>
@@ -648,7 +666,7 @@ export default function Dashboard() {
 
       {/* Market Breadth + Top Movers */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-sm border-muted col-span-1">
+        <Card className="rounded-sm border-muted col-span-1 glass hover-glow transition-all duration-200">
           <CardHeader className="p-4 border-b border-muted">
             <CardTitle className="text-sm font-mono">MARKET BREADTH</CardTitle>
           </CardHeader>
@@ -678,7 +696,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-sm border-muted col-span-1 md:col-span-2">
+        <Card className="rounded-sm border-muted col-span-1 md:col-span-2 glass hover-glow transition-all duration-200">
           <CardHeader className="p-4 border-b border-muted">
             <CardTitle className="text-sm font-mono">TOP GAINERS / LOSERS</CardTitle>
           </CardHeader>
@@ -715,7 +733,7 @@ export default function Dashboard() {
       </div>
 
       {/* Active Signals */}
-      <Card className="rounded-sm border-muted">
+      <Card className="rounded-sm border-muted glass hover-glow transition-all duration-200">
         <CardHeader className="p-4 border-b border-muted">
           <CardTitle className="text-sm font-mono">ACTIVE SIGNALS</CardTitle>
         </CardHeader>

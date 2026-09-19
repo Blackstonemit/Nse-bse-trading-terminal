@@ -16,7 +16,7 @@
     "@modelcontextprotocol/sdk": "^1.13.1",
     "@workspace/db": "workspace:*",
     "drizzle-orm": "catalog:",
-    "yahoo-finance2": "^2.13.3",
+    "yahoo-finance2": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

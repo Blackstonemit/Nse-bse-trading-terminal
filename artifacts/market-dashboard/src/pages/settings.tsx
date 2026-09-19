@@ -87,6 +87,9 @@ function AIProvidersCard() {
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<Record<string, boolean>>({});
 
+  const [customBaseUrls, setCustomBaseUrls] = useState<Record<string, string>>({});
+  const [customModels, setCustomModels] = useState<Record<string, string>>({});
+
   // Local state for Ollama fields
   const [ollamaHost, setOllamaHost] = useState("http://localhost:11434");
   const [ollamaModel, setOllamaModel] = useState("qwen2.5");
@@ -94,8 +97,17 @@ function AIProvidersCard() {
   const fetchStatus = async () => {
     try {
       const res = await fetch(apiUrl("/api/ai-providers/status"));
-      const data = await res.json() as ProviderStatus[];
+      const data = await res.json() as any[];
       setProviders(data);
+
+      const urls: Record<string, string> = {};
+      const mdls: Record<string, string> = {};
+      data.forEach((p) => {
+        urls[p.provider] = p.customBaseUrl || "";
+        mdls[p.provider] = p.customModel || "";
+      });
+      setCustomBaseUrls(urls);
+      setCustomModels(mdls);
 
       const ollama = data.find((p) => p.provider === "ollama");
       if (ollama?.value) {
@@ -120,7 +132,8 @@ function AIProvidersCard() {
 
   const handleSaveKey = async (provider: string, customKey?: string) => {
     const key = customKey !== undefined ? customKey : keyInputs[provider]?.trim();
-    if (provider !== "ollama" && (!key || key.length < 8)) {
+    const isConfigured = providers.find((p) => p.provider === provider)?.configured;
+    if (provider !== "ollama" && !key && !isConfigured) {
       toast({ title: "Invalid Key", description: "Please enter a valid API key.", variant: "destructive" });
       return;
     }
@@ -129,19 +142,23 @@ function AIProvidersCard() {
       const res = await fetch(apiUrl(`/api/ai-providers/${provider}/key`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: key }),
+        body: JSON.stringify({
+          apiKey: key || undefined,
+          customBaseUrl: customBaseUrls[provider]?.trim() || null,
+          customModel: customModels[provider]?.trim() || null,
+        }),
       });
       if (!res.ok) throw new Error("Save failed");
       toast({
-        title: provider === "ollama" ? "Ollama Configured" : "API Key Saved",
-        description: `${PROVIDER_META[provider].label} is now active.`,
+        title: provider === "ollama" ? "Ollama Configured" : "Configuration Saved",
+        description: `${PROVIDER_META[provider].label} is now updated.`,
       });
       if (provider !== "ollama") {
         setKeyInputs((p) => ({ ...p, [provider]: "" }));
       }
       await fetchStatus();
     } catch {
-      toast({ title: "Error", description: "Failed to save API key.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save configuration.", variant: "destructive" });
     } finally {
       setSaving((p) => ({ ...p, [provider]: false }));
     }
@@ -289,55 +306,86 @@ function AIProvidersCard() {
                     </div>
                   ) : (
                     <form
-                      className="flex items-center gap-2 pt-1"
+                      className="flex flex-col gap-2 pt-1"
                       onSubmit={(e) => { e.preventDefault(); handleSaveKey(p.provider); }}
                     >
-                      <div className="relative flex-1">
-                        <Input
-                          type={showKey[p.provider] ? "text" : "password"}
-                          value={keyInputs[p.provider] ?? ""}
-                          onChange={(e) => setKeyInputs((prev) => ({ ...prev, [p.provider]: e.target.value }))}
-                          placeholder={p.configured ? "Enter new key to update…" : meta.keyHint}
-                          className="font-mono text-xs bg-background border-muted pr-8 h-8"
-                          autoComplete="off"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowKey((prev) => ({ ...prev, [p.provider]: !prev[p.provider] }))}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {showKey[p.provider] ? <EyeOff className="h-3 w-3" /> : <EyeIcon className="h-3 w-3" />}
-                        </button>
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-mono text-muted-foreground block mb-1">API KEY</label>
+                          <div className="relative">
+                            <Input
+                              type={showKey[p.provider] ? "text" : "password"}
+                              value={keyInputs[p.provider] ?? ""}
+                              onChange={(e) => setKeyInputs((prev) => ({ ...prev, [p.provider]: e.target.value }))}
+                              placeholder={p.configured ? "Enter new API key to update..." : meta.keyHint}
+                              className="font-mono text-xs bg-background border-muted pr-8 h-8"
+                              autoComplete="off"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowKey((prev) => ({ ...prev, [p.provider]: !prev[p.provider] }))}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {showKey[p.provider] ? <EyeOff className="h-3 w-3" /> : <EyeIcon className="h-3 w-3" />}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenKeyPage(p.provider)}
-                        className="font-mono text-xs border-muted h-8 gap-1 shrink-0"
-                        title={`Get ${meta.label} API key`}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        GET KEY
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleTestProvider(p.provider)}
-                        disabled={testing[p.provider] || saving[p.provider] || !p.configured}
-                        className="font-mono text-xs h-8 shrink-0"
-                      >
-                        {testing[p.provider] ? <Loader2 className="h-3 w-3 animate-spin" /> : "TEST"}
-                      </Button>
-                      <Button
-                        type="submit"
-                        size="sm"
-                        disabled={!keyInputs[p.provider] || saving[p.provider]}
-                        className="font-mono text-xs h-8 shrink-0"
-                      >
-                        {saving[p.provider] ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAVE"}
-                      </Button>
+
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-mono text-muted-foreground block mb-1">CUSTOM BASE URL (OPTIONAL)</label>
+                          <Input
+                            type="text"
+                            value={customBaseUrls[p.provider] ?? ""}
+                            onChange={(e) => setCustomBaseUrls((prev) => ({ ...prev, [p.provider]: e.target.value }))}
+                            placeholder="e.g., https://api.openai.com/v1"
+                            className="font-mono text-xs bg-background border-muted h-8"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] font-mono text-muted-foreground block mb-1">CUSTOM MODEL NAME (OPTIONAL)</label>
+                          <Input
+                            type="text"
+                            value={customModels[p.provider] ?? ""}
+                            onChange={(e) => setCustomModels((prev) => ({ ...prev, [p.provider]: e.target.value }))}
+                            placeholder="e.g., gpt-4o-mini"
+                            className="font-mono text-xs bg-background border-muted h-8"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 justify-end pt-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenKeyPage(p.provider)}
+                          className="font-mono text-xs border-muted h-8 gap-1"
+                          title={`Get ${meta.label} API key`}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          GET KEY
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleTestProvider(p.provider)}
+                          disabled={testing[p.provider] || saving[p.provider] || !p.configured}
+                          className="font-mono text-xs h-8"
+                        >
+                          {testing[p.provider] ? <Loader2 className="h-3 w-3 animate-spin" /> : "TEST"}
+                        </Button>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={saving[p.provider]}
+                          className="font-mono text-xs h-8"
+                        >
+                          {saving[p.provider] ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAVE CONFIG"}
+                        </Button>
+                      </div>
                     </form>
                   )}
                 </div>
@@ -428,6 +476,7 @@ export default function SettingsDashboard() {
   const { settings, update, reset } = useSettings();
   const { toast } = useToast();
   const [local, setLocal] = useState(settings);
+  const [showScreenerPassword, setShowScreenerPassword] = useState(false);
 
   const handleSave = () => {
     update(local);
@@ -472,6 +521,15 @@ export default function SettingsDashboard() {
                 <SelectContent>
                   <SelectItem value="NSE">NSE</SelectItem>
                   <SelectItem value="BSE">BSE</SelectItem>
+                </SelectContent>
+              </Select>
+            </Row>
+            <Row label="Market Data Source" hint="Preferred data feed provider for stock quotes">
+              <Select value={local.dataSource || "yahoo"} onValueChange={(v: "yahoo" | "google") => set("dataSource", v)}>
+                <SelectTrigger className="w-36 font-mono border-muted bg-background text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yahoo">Yahoo Finance</SelectItem>
+                  <SelectItem value="google">Google Finance</SelectItem>
                 </SelectContent>
               </Select>
             </Row>
@@ -545,11 +603,60 @@ export default function SettingsDashboard() {
                 </SelectContent>
               </Select>
             </Row>
+            <Row label="Theme Accent" hint="Choose the application accent theme color">
+              <Select value={local.themeAccent || "blue"} onValueChange={(v: "blue" | "emerald" | "amber" | "violet") => set("themeAccent", v)}>
+                <SelectTrigger className="w-36 font-mono border-muted bg-background text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blue">Classic Blue</SelectItem>
+                  <SelectItem value="emerald">Emerald Green</SelectItem>
+                  <SelectItem value="amber">Amber Gold</SelectItem>
+                  <SelectItem value="violet">Cyberpunk Violet</SelectItem>
+                </SelectContent>
+              </Select>
+            </Row>
             <Row label="Show Synthetic Data" hint="Show synthetic options data when live NSE feed is unavailable">
               <Toggle checked={local.showSyntheticData} onChange={(v) => set("showSyntheticData", v)} />
             </Row>
             <Row label="Highlight ATM Strike" hint="Visually highlight the At-The-Money strike in options chain">
               <Toggle checked={local.highlightATM} onChange={(v) => set("highlightATM", v)} />
+            </Row>
+          </CardContent>
+        </Card>
+
+        {/* Screener.in Integration */}
+        <Card className="rounded-sm border-muted bg-card">
+          <SectionHeader icon={BrainCircuit} title="SCREENER.IN INTEGRATION" />
+          <CardContent className="p-4 space-y-4">
+            <p className="text-xs text-muted-foreground font-mono">
+              Provide credentials to fetch dynamic stock lists from Screener.in queries. Without credentials, default curated lists are used.
+            </p>
+            <Row label="Username / Email" hint="Your registered Screener.in email">
+              <Input
+                type="email"
+                value={local.screenerUsername}
+                onChange={(e) => set("screenerUsername", e.target.value)}
+                placeholder="email@example.com"
+                className="w-56 font-mono bg-background border-muted text-sm"
+              />
+            </Row>
+            <Row label="Password" hint="Your Screener.in account password">
+              <div className="relative w-56">
+                <Input
+                  type={showScreenerPassword ? "text" : "password"}
+                  value={local.screenerPassword}
+                  onChange={(e) => set("screenerPassword", e.target.value)}
+                  placeholder="••••••••"
+                  className="font-mono bg-background border-muted text-sm pr-8"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowScreenerPassword(!showScreenerPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showScreenerPassword ? <EyeOff className="h-3.5 w-3.5" /> : <EyeIcon className="h-3.5 w-3.5" />}
+                </button>
+              </div>
             </Row>
           </CardContent>
         </Card>
@@ -706,8 +813,9 @@ export default function SettingsDashboard() {
       {/* Status summary */}
       <Card className="rounded-sm border-muted/40 bg-muted/10">
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-xs font-mono">
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 text-xs font-mono">
             <div><div className="text-muted-foreground mb-1">SYMBOL / EXCH</div><div className="font-bold">{local.defaultSymbol} / {local.defaultExchange}</div></div>
+            <div><div className="text-muted-foreground mb-1">DATA SOURCE</div><div className="font-bold uppercase">{local.dataSource || "yahoo"}</div></div>
             <div><div className="text-muted-foreground mb-1">REFRESH</div><div className="font-bold">{local.autoRefresh ? `Every ${local.refreshInterval / 1000}s` : "PAUSED"}</div></div>
             <div><div className="text-muted-foreground mb-1">LOT SIZE</div><div className="font-bold">{local.lotSize} units</div></div>
             <div><div className="text-muted-foreground mb-1">AGENT STYLE</div><div className="font-bold"><StyleBadge style={local.agentStyle} /></div></div>

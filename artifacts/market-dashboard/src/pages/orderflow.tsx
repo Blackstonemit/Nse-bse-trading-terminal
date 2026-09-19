@@ -31,7 +31,8 @@ export default function OrderFlowPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
-    refetchInterval: 5000,
+    refetchInterval: 2000,
+    staleTime: 1000,
   });
 
   const { data: blocksRes, isLoading: blocksLoading } = useQuery<{ data: BlockTrade[] }>({
@@ -41,7 +42,8 @@ export default function OrderFlowPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
-    refetchInterval: 10000,
+    refetchInterval: 3000,
+    staleTime: 1500,
   });
 
   const bids = depthRes?.data?.bids || [];

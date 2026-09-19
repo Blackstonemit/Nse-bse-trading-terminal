@@ -2,13 +2,51 @@ import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 
-const dbPath = process.env.DATABASE_URL || "file:database.db";
-const url = dbPath.startsWith("file:") ? dbPath : `file:${dbPath}`;
+import path from "path";
+import fs from "fs";
+
+function resolveDbUrl(rawUrl?: string): string {
+  const urlStr = rawUrl || process.env.DATABASE_URL || "file:database.db";
+  if (urlStr.startsWith("file:")) {
+    const rawPath = urlStr.slice(5);
+    if (path.isAbsolute(rawPath)) {
+      return urlStr;
+    }
+    
+    // Check if directly relative to cwd exists
+    const inCwd = path.resolve(process.cwd(), rawPath);
+    if (fs.existsSync(inCwd)) {
+      return `file:${inCwd}`;
+    }
+
+    // Find database.db in current or ancestor workspace root
+    let curr = process.cwd();
+    for (let i = 0; i < 5; i++) {
+      const candidate = path.join(curr, "database.db");
+      if (fs.existsSync(candidate)) {
+        return `file:${candidate}`;
+      }
+      const parent = path.dirname(curr);
+      if (parent === curr) break;
+      curr = parent;
+    }
+
+    return `file:${inCwd}`;
+  }
+  return urlStr;
+}
+
+const url = resolveDbUrl();
 
 export const client = createClient({ url });
 export const db = drizzle(client, { schema });
 
 export async function initDb() {
+  try {
+    await client.execute("PRAGMA journal_mode = WAL;");
+    await client.execute("PRAGMA busy_timeout = 5000;");
+  } catch {}
+
   // 1. Create users table
   await client.execute(`
     CREATE TABLE IF NOT EXISTS users (
@@ -89,6 +127,8 @@ export async function initDb() {
       provider TEXT NOT NULL,
       api_key TEXT,
       enabled INTEGER NOT NULL DEFAULT 1,
+      custom_base_url TEXT,
+      custom_model TEXT,
       updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
       UNIQUE(user_id, provider),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -156,6 +196,16 @@ export async function initDb() {
   for (const col of tradesColumns) {
     try {
       await client.execute(`ALTER TABLE trades ADD COLUMN ${col} REAL;`);
+    } catch (e) {
+      // Column probably already exists
+    }
+  }
+
+  // Run dynamic migrations for provider_settings custom columns
+  const providerColumns = ["custom_base_url", "custom_model"];
+  for (const col of providerColumns) {
+    try {
+      await client.execute(`ALTER TABLE provider_settings ADD COLUMN ${col} TEXT;`);
     } catch (e) {
       // Column probably already exists
     }

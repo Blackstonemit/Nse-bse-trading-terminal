@@ -11,6 +11,7 @@ import {
   getGetMarketQuotesQueryKey
 } from "@workspace/api-client-react";
 import { useLiveRefresh } from "@/hooks/use-live-refresh";
+import { useSettings } from "@/lib/settings";
 import { LiveRefreshBar } from "@/components/live-refresh-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,9 +41,18 @@ export default function WatchlistBoard() {
       : "";
   }, [watchlist]);
 
+  const { settings } = useSettings();
+
   const { data: quotesData, isLoading: quotesLoading } = useGetMarketQuotes(
-    { symbols: queryStr },
-    { query: { enabled: !!queryStr, queryKey: getGetMarketQuotesQueryKey({ symbols: queryStr }) } }
+    { symbols: queryStr, source: settings.dataSource },
+    {
+      query: {
+        enabled: !!queryStr,
+        queryKey: getGetMarketQuotesQueryKey({ symbols: queryStr, source: settings.dataSource }),
+        refetchInterval: 3000,
+        staleTime: 1000,
+      } as any,
+    }
   );
 
   const liveQuotes = useMemo(() => {
@@ -61,7 +71,7 @@ export default function WatchlistBoard() {
     onRefresh: () => {
       queryClient.invalidateQueries({ queryKey: getGetWatchlistQueryKey() });
       if (queryStr) {
-        queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: queryStr }) });
+        queryClient.invalidateQueries({ queryKey: getGetMarketQuotesQueryKey({ symbols: queryStr, source: settings.dataSource }) });
       }
     },
   });

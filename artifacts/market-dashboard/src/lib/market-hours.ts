@@ -20,7 +20,7 @@ export function isPreOpenSession(): boolean {
 }
 
 export function getRefreshIntervalSecs(): number {
-  return isMarketOpen() ? 15 : 60;
+  return isMarketOpen() ? 2 : 5;
 }
 
 export function formatISTTime(date: Date): string {
